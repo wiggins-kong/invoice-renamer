@@ -224,11 +224,8 @@ app.whenReady().then(() => {
         const samples = [
           base + '样例1_电子普通发票.pdf',
           base + '样例2_电子专用发票.pdf',
+          'C:/Users/wiggins/invoice-renamer/electron/tests/fixtures/26447000001568876321_2026-08-12广州晶东贸易有限公司.pdf',
         ];
-        try {
-          const desktopPdf = fs.readdirSync('C:/Users/wiggins/Desktop').find(f => f.toLowerCase().endsWith('.pdf'));
-          if (desktopPdf) samples.push('C:/Users/wiggins/Desktop/' + desktopPdf);
-        } catch (e) { /* ignore */ }
         const items = await parseItems(samples, cfg);
         for (const it of items) console.log('SMOKE', it.filename, '->', it.suggested, '|', it.status);
         const allOk = items.length >= 2 && items.every(i => i.status === 'ok');

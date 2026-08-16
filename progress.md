@@ -1,5 +1,18 @@
 # 进度日志
 
+## 会话：2026-08-16（v2.3.1：清理 Web 版文件）
+
+### 阶段 12（项目瘦身：移除 Web 版）
+- **状态：** complete
+- 执行的操作：
+  1. 删除全部 Web 版文件：根目录 app.py/config.py/extractor.py/llm_extractor.py/paths.py/renamer.py/crypto_util.py、requirements.txt/start.bat/InvoiceRenamer.spec、config.yaml/undo_log.json、static/、uploads/、tests/、build/、dist/、venv/、docs/、__pycache__/
+  2. 测试发票迁移：uploads 的 2 张真实发票 + 水印发票 → `electron/tests/fixtures/`（水印发票改名为 水印发票_26447000001546483915.pdf），测试路径更新
+  3. smoke 模式改为自包含：移除桌面 PDF 探测，改用 samples + fixtures
+  4. 清理中间产物：.impeccable/review/、electron/build/concepts/、electron/dist/win-unpacked/、builder-debug.yml
+  5. README 重写（移除 Web 版段落、更新字段表含 金额/税额、日期格式、项目结构）
+- 验证：回归 5/5 + 冒烟 ALL_OK（3 张样例/真实发票）
+- 剩余结构：electron/（完整桌面版）+ samples/ + 文档 + .git
+
 ## 会话：2026-08-16（v2.3：日期汉字格式 + Git 版本管理）
 
 ### 阶段 11（日期格式 + Git 初始化）

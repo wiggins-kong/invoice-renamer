@@ -11,7 +11,7 @@
 3. 检查识别结果 → 点「🚀 全部重命名」→ 完成（支持一键撤销）
 4. 关闭窗口即退出
 
-数据文件（`config.json` 设置、`undo_log.json` 撤销记录）生成在 exe 旁边 `data/` 目录，换电脑拷贝整个文件夹即可。
+数据文件（`config.json` 设置、`undo_log.json` 撤销记录）保存在 `%APPDATA%\invoice-renamer\data\`。
 
 > 若杀毒软件误报，添加信任即可（Electron 打包的程序常见现象）。
 
@@ -27,26 +27,28 @@
 | 字段 | 说明 |
 |------|------|
 | invoice_no | 发票号码 |
-| date | 开票日期（YYYY-MM-DD） |
+| date | 开票日期（YYYY年MM月DD日） |
 | seller / buyer | 销售方 / 购买方名称 |
+| amount_excl / tax | 金额（不含税）/ 税额 |
 | amount / amount_cn | 价税合计（小写 / 大写） |
 | type | 票种（电子普通/专用发票、数电票、铁路客票等） |
 | seller_tax_id / buyer_tax_id | 销售方 / 购买方税号 |
 
-模板中缺失的字段自动跳过，连续分隔符自动折叠。
+模板中缺失的字段自动跳过，连续分隔符自动折叠。结果表格底部自动汇总：金额合计 / 税额合计 / 价税合计。
 
 ## 版式兼容
 
 - ✅ 数电票（单栏版式）
 - ✅ 增值税电子发票（单栏版式）
 - ✅ 增值税专用发票（左右双栏版式，页面中线裁剪分栏提取）
+- ✅ 防复制水印 PDF（标签字/短语重复 3 遍，自动折叠去重）
 - ✅ 金额提取不依赖 ¥ 符号（真实 PDF 可能提取为 ´），备注行编号不干扰
 
 ## 提取模式
 
 | 模式 | 行为 |
 |------|------|
-| 混合 hybrid（默认） | 本地正则优先，关键字段缺失时调 LLM 补全 |
+| 混合 hybrid（默认） | 本地正则优先，关键字段（号码/日期/金额/销售方/购买方）缺失时调 LLM 补全 |
 | 仅正则 regex | 纯本地离线，不调任何 API，界面隐藏 LLM 配置 |
 | 仅 LLM llm | 所有字段走大模型（需 API Key） |
 
@@ -58,7 +60,7 @@ LLM 提供商：**DeepSeek**（默认）、**OpenCode Go**（Base URL `https://o
 cd electron
 npm install                    # 安装依赖（electron 二进制走 npmmirror 镜像更快）
 node scripts/gen-icons.js      # 从 build/icon-master.svg 重新生成全尺寸 PNG + ICO
-node tests/test_extractor.js   # 解析回归测试（3 张发票全对）
+node tests/test_extractor.js   # 解析回归测试（样例 + 真实发票）
 npx electron . --smoke         # 主进程冒烟自检
 npx electron-builder --win portable   # 打包 → dist/发票识别重命名.exe
 ```
@@ -79,18 +81,16 @@ invoice-renamer/
 ├── electron/                 # 桌面版（Electron）
 │   ├── main.js               # 主进程：窗口 + IPC + 文件/解析/重命名
 │   ├── preload.js            # contextBridge 安全桥（含拖拽绝对路径）
-│   ├── lib/extractor.js      # pdfjs 文本提取 + 正则解析（双栏版式）
+│   ├── lib/extractor.js      # pdfjs 文本提取 + 正则解析（双栏版式/水印去重）
 │   ├── lib/renamer.js        # 模板渲染 + 重命名 + 撤销
 │   ├── lib/config.js         # 配置读写
 │   ├── lib/llm.js            # LLM 提取（OpenAI 兼容）
-│   ├── renderer/index.html   # 界面（暗色主题，模板拼接器）
-│   ├── tests/test_extractor.js
-│   └── dist/发票识别重命名.exe  # 打包产物
-├── app.py 等                  # 旧版 Web 服务（源码运行，v1.1）
-├── samples/                  # 样例发票
-├── tests/                    # Web 版测试
-├── docs/design.md
-└── task_plan.md / findings.md / progress.md   # 规划文件
+│   ├── renderer/index.html   # 界面（明亮双栏工作台，三主题）
+│   ├── build/                # 图标设计源 + 生成产物
+│   ├── scripts/              # gen-icons.js 等工具
+│   ├── tests/                # 回归测试（fixtures/ 含测试发票）
+│   └── dist/发票识别重命名.exe  # 打包产物（交付物）
+├── samples/                  # 样例发票（测试用）
+├── PRODUCT.md / README.md    # 产品与使用文档
+└── progress.md / findings.md / task_plan.md   # 开发记录
 ```
-
-> 旧版 Web 工具（FastAPI + 网页）保留在项目根目录，`python app.py` 可继续使用（127.0.0.1:8600）。
