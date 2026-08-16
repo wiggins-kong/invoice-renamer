@@ -541,7 +541,10 @@
       </div>
       <div class="field">
         <label class="f" for="llmKey">API Key</label>
-        <input type="password" id="llmKey" placeholder="sk-..." autocomplete="off" spellcheck="false">
+        <div class="row-ctl" style="margin-bottom:0">
+          <input type="password" id="llmKey" placeholder="sk-…（未配置）" autocomplete="off" spellcheck="false" style="flex:1">
+          <button class="btn btn-ghost btn-sm" id="llmClearBtn" onclick="clearSavedKey()" title="删除已保存的 API Key" style="display:none">清除</button>
+        </div>
       </div>
       <div class="muted" style="padding-bottom:6px">API Key 按提供商分别保存；模型列表可点「↻ 刷新」从 {Base URL}/models 自动拉取。</div>
     </div>
@@ -561,7 +564,8 @@ let items = [];      // 当前解析结果
 let lastDirs = [];   // 最近处理的文件夹（用于重命名后刷新）
 let themeMode = 'system';
 let modelValue = '';   // 当前模型值（select/input 两种形态间保持）
-let llmKeys = {};      // 各提供商的 API key（provider -> key）
+let keyStates = {};    // 各提供商 key 状态（主进程脱敏视图：{masked, has}，无明文）
+let keyDraft = {};     // 用户本次会话未提交的 key 输入（provider -> 明文输入/'__clear__'）
 let draggingIdx = -1;  // 拖拽中的模板段索引（实时重排用）
 let reorderQueued = false; // rAF 节流：一帧内最多重排一次
 let dragSeg = null;    // 被拖的模板段（对象引用）
@@ -621,14 +625,17 @@ function onProviderChange() {
   const prevDef = providerDefaults(prev);
   const curBase = $('llmBase').value.trim();
   const curModel = modelValue.trim();
-  // 保存上一个 provider 的 key，加载新 provider 的 key（各存各的，不串）
-  if (prev && prev !== p) llmKeys[prev] = $('llmKey').value.trim();
-  $('llmKey').value = llmKeys[p] || '';
+  // 用户在当前输入框输入的内容暂存到 draft（不落盘、不进配置，切回来不丢）
+  if (prev && prev !== p) {
+    const v = $('llmKey').value;
+    if (v) keyDraft[prev] = v; // 只记录真实输入；清空/清除标记保留原 draft
+  }
   // Base URL / 模型：仅在空值或等于上一个提供商默认值时替换为新默认
   if (!curBase || curBase === prevDef.base_url) $('llmBase').value = providerDefaults(p).base_url;
   if (!curModel || curModel === prevDef.model) modelValue = providerDefaults(p).model;
   $('llmProvider').dataset.prevProvider = p;
   renderModelField();
+  applyKeyField(p);
   fetchModels(false);
 }
 // 模型字段：有模型列表 → 真下拉 select（全部可见）；无列表 → 可输入文本框
@@ -651,14 +658,14 @@ function renderModelField(list) {
 }
 async function fetchModels(showErrors) {
   const base = $('llmBase').value.trim();
-  const key = $('llmKey').value.trim();
+  const key = $('llmKey').value.trim(); // 只有用户草稿；已保存 key 由主进程回填
   if (!base) {
     renderModelField();
     if (showErrors) toast('请先填写 Base URL');
     return;
   }
   try {
-    const res = await window.invoiceAPI.listModels({ base_url: base, api_key: key });
+    const res = await window.invoiceAPI.listModels({ base_url: base, api_key: key, provider: $('llmProvider').value });
     if (res.error) throw new Error(res.error);
     const list = res.models || [];
     if (showErrors) toast(list.length ? `已获取 ${list.length} 个模型` : '该服务没有返回模型列表', 4000);
@@ -668,6 +675,37 @@ async function fetchModels(showErrors) {
     if (showErrors) toast('获取模型列表失败：' + e.message, 5000);
   }
 }
+// API Key 字段展示：只看掩码/草稿，无明文回填
+//  - 已保存（无草稿）：placeholder 显示掩码 +「清除」按钮
+//  - 有草稿输入：显示用户输入，隐藏「清除」（避免误删已保存 key）
+//  - 清除标记（__clear__）：提示「保存后生效」，等待提交
+function applyKeyField(p) {
+  const st = keyStates[p] || {};
+  const d = keyDraft[p];
+  const input = $('llmKey');
+  $('llmClearBtn').style.display = st.has && !d ? 'inline-flex' : 'none';
+  if (d === '__clear__') {
+    input.value = '';
+    input.placeholder = '将清除已保存的 Key（保存后生效）';
+  } else if (d) {
+    input.value = d;
+    input.placeholder = st.has ? 'sk-…（已保存，留空则保留）' : 'sk-…';
+  } else {
+    input.value = '';
+    input.placeholder = st.has ? st.masked + '（已保存，留空则保留）' : 'sk-…（未配置）';
+  }
+}
+function clearSavedKey() {
+  keyDraft[$('llmProvider').value] = '__clear__';
+  applyKeyField($('llmProvider').value);
+}
+// key 输入监听：写入 draft 并即时刷新按钮态（与主界面 .new textarea 委托共存）
+document.addEventListener('input', e => {
+  if (e.target && e.target.id === 'llmKey') {
+    keyDraft[$('llmProvider').value] = e.target.value;
+    applyKeyField($('llmProvider').value);
+  }
+});
 function onModeChange() {
   const m = $('mode').value;
   const hints = {
@@ -686,31 +724,29 @@ function parsingToast() {
 }
 function collectSettings() {
   const p = $('llmProvider').value;
-  llmKeys[p] = $('llmKey').value.trim();
   return {
     extraction: { mode: $('mode').value },
     llm: {
       provider: p,
       base_url: $('llmBase').value.trim(),
       model: modelValue || $('llmModel').value.trim(),
-      api_key: llmKeys[p] || '',
-      keys: llmKeys,
+      // '' = 保留原 key；'__clear__' = 删除；其他 = 新值（主进程加密落盘）
+      api_key: keyDraft[p] || '',
     },
     naming: { template: template, output: 'inplace', conflict: $('conflict').value },
     ui: { theme: $('theme').value }
   };
 }
 async function loadConfig() {
-  const cfg = await window.invoiceAPI.getConfig();
+  const cfg = await window.invoiceAPI.getConfig(); // 主进程已脱敏：keys = {p:{masked,has}}
   $('mode').value = cfg.extraction.mode;
   $('llmProvider').value = cfg.llm.provider === 'custom' ? 'custom' : (cfg.llm.provider || 'deepseek');
   $('llmProvider').dataset.prevProvider = $('llmProvider').value;
   $('llmBase').value = cfg.llm.base_url;
   modelValue = cfg.llm.model || '';
-  llmKeys = { ...(cfg.llm.keys || {}) };
-  const p = $('llmProvider').value;
-  if (!llmKeys[p] && cfg.llm.api_key) llmKeys[p] = cfg.llm.api_key; // 兼容旧配置（单一 key 迁移到按提供商）
-  $('llmKey').value = llmKeys[p] || '';
+  keyStates = { ...(cfg.llm.keys || {}) };
+  keyDraft = {};
+  applyKeyField($('llmProvider').value);
   $('conflict').value = cfg.naming.conflict;
   $('theme').value = (cfg.ui && cfg.ui.theme) || 'system';
   template = cfg.naming.template || PRESETS.default;
@@ -723,6 +759,10 @@ async function loadConfig() {
 async function saveConfig(silent) {
   try {
     await window.invoiceAPI.saveConfig(collectSettings());
+    keyDraft = {}; // 已提交，清空草稿（含 key）
+    const fresh = await window.invoiceAPI.getConfig(); // 刷新掩码状态
+    keyStates = { ...((fresh.llm && fresh.llm.keys) || {}) };
+    applyKeyField($('llmProvider').value);
     if (!silent) {
       $('saveHint').textContent = '✓ 已保存 ' + new Date().toLocaleTimeString();
       toast('设置已保存');
@@ -743,35 +783,35 @@ function openSettings() {
   const p = $('llmProvider').value;
   settingsSnapshot = {
     provider: p,
-    keys: { ...llmKeys },
+    states: keyStates,
+    draft: { ...keyDraft },
     model: modelValue,
     base: $('llmBase').value,
   };
-  $('llmKey').value = llmKeys[p] || '';
+  applyKeyField(p);
   fetchModels(false); // 重新拉取模型列表（无列表时静默回退为输入框）
   $('settingsModal').style.display = 'flex';
 }
 function closeSettings(restore) {
   if (restore && settingsSnapshot) {
-    // 取消：恢复打开前的状态（各提供商 key / 模型 / 提供商选择）
-    llmKeys = settingsSnapshot.keys;
+    // 取消：恢复打开前的状态（key 状态/草稿/模型/提供商选择）
+    keyStates = settingsSnapshot.states;
+    keyDraft = settingsSnapshot.draft;
     modelValue = settingsSnapshot.model;
     $('llmProvider').value = settingsSnapshot.provider;
     $('llmProvider').dataset.prevProvider = settingsSnapshot.provider;
     $('llmBase').value = settingsSnapshot.base;
-    $('llmKey').value = llmKeys[settingsSnapshot.provider] || '';
+    applyKeyField(settingsSnapshot.provider);
     renderModelField();
     settingsSnapshot = null;
   }
   $('settingsModal').style.display = 'none';
 }
 async function saveSettings() {
-  const p = $('llmProvider').value;
-  llmKeys[p] = $('llmKey').value.trim();
   modelValue = $('llmModel').value.trim() || modelValue;
   settingsSnapshot = null;
   $('settingsModal').style.display = 'none';
-  await saveConfig();
+  await saveConfig(); // 提交含 key draft，保存后刷新掩码
 }
 // Esc 关闭设置弹窗
 document.addEventListener('keydown', e => {

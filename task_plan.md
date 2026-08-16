@@ -4,7 +4,7 @@
 做一个本地运行的「后端服务 + 网页前端」工具：识别 PDF 发票内容（发票号码、日期、销售方、金额等），按可视化拼接的命名模板批量重命名，支持 LLM 可选兜底；**打包为单文件 exe，任意 Windows 免安装运行**。
 
 ## 当前阶段
-阶段 13（设置弹窗）→ complete
+阶段 14（API key 加密落盘）→ complete
 
 ## 各阶段
 
@@ -58,6 +58,14 @@
 - [x] 交互：打开时快照、取消/遮罩/Esc 原样恢复、保存写配置；provider 切换 key 按提供商隔离
 - [x] 配置结构（cfg.llm）与 IPC 不变，仅前端改造；README 使用流程更新
 - [x] 验证：交互验证脚本 scripts/verify-settings.js 17/17 通过 + 截图检查（齿轮图标/弹窗/遮罩层级）；extractor 回归 5/5；--smoke ALL_OK；重新打包 exe 实测通过
+- **状态：** complete
+
+### 阶段 14（v2.5：API key 加密落盘 safeStorage/DPAPI）
+- [x] 新增 lib/secret.js：safeStorage 封装（encrypt/decrypt/isEncrypted/mask，注入式可单测）；值格式 enc:<base64>
+- [x] config.js：saveConfig 写盘前自动加密 keys（enc: 跳过；加密失败宁删不落明文）；遗留 api_key 单字段不再落盘
+- [x] main.js：config:get 脱敏视图（keys→{masked,has}，渲染层永无明文）；config:save 语义（''=保留/新值=加密/__clear__=删除）；llm:list-models 用已保存 key；启动迁移旧 api_key 单字段
+- [x] renderer：keyStates 掩码展示 + placeholder「已保存，留空则保留」+「清除」按钮；keyDraft 草稿暂存（切换 provider 不丢输入）；输入即隐藏清除按钮
+- [x] 验证：verify-secret.js 14/14（磁盘无明文/往返/损坏密文→null/遗留字段清除）；verify-settings.js 19/19（掩码不回填/草稿提交/不提交 keys map）；extractor 5/5；--smoke ALL_OK；真实配置迁移完成（明文→enc:，模板未破坏）
 - **状态：** complete
 
 ## 关键问题

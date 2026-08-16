@@ -1,4 +1,5 @@
 // 设置弹窗交互验证（开发用）：stub IPC + 真实 renderer/preload，跑完整交互断言
+// 注意：主进程真实 config:get 已脱敏（keys = {p:{masked,has}}），stub 需模拟同样结构
 // 运行：npx electron scripts/verify-settings.js
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
@@ -9,14 +10,18 @@ const outPng = process.argv.find(a => a.startsWith('--out=') && a.length > 5)?.s
 
 let lastSaved = null;
 
+// 脱敏视图（与主进程 maskConfig 输出一致）：keys = {p:{masked,has}}
 const TEST_CFG = {
   extraction: { mode: 'hybrid' },
   llm: {
     provider: 'deepseek',
     base_url: 'https://api.deepseek.com/v1',
     model: 'deepseek-chat',
-    api_key: 'sk-d',
-    keys: { deepseek: 'sk-d', opencode: 'sk-o' },
+    api_key: '',
+    keys: {
+      deepseek: { masked: 'sk-***9b4', has: true },
+      opencode: { masked: '', has: false },
+    },
     timeout: 60,
   },
   naming: {
@@ -41,19 +46,18 @@ function registerStubs() {
 app.whenReady().then(async () => {
   registerStubs();
   const win = new BrowserWindow({
-    width: 1180, height: 820, show: false,
+    width: 1180, height: 820, show: true,
     webPreferences: {
       preload: path.join(__dirname, '..', 'preload.js'),
       contextIsolation: true, nodeIntegration: false, sandbox: false,
     },
   });
   await win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
-  win.show(); // 截图需要真实可见窗口（隐藏窗口下 backdrop-filter 合成层可能不渲染）
 
   const results = [];
   const R = (name, ok, extra) => { results.push({ name, ok, extra }); };
 
-  // ---- 第一段：打开 / 切换提供商 / 取消恢复 ----
+  // ---- 第一段：打开 / 掩码展示 / 切换提供商 / 取消恢复 / 草稿保存 ----
   const part1 = await win.webContents.executeJavaScript(`
     (async () => {
       const $ = id => document.getElementById(id);
@@ -65,45 +69,50 @@ app.whenReady().then(async () => {
       R1('entry-visible', !!entry && entry.style.display !== 'none' && getComputedStyle(entry).position === 'fixed');
 
       openSettings();
-      await tick(50);
+      await tick(60);
       R1('modal-opens', $('settingsModal').style.display === 'flex');
       R1('provider-deepseek', $('llmProvider').value === 'deepseek');
       R1('base-deepseek', $('llmBase').value === 'https://api.deepseek.com/v1');
-      R1('key-deepseek', $('llmKey').value === 'sk-d');
+      // 已保存 key：不回填明文，placeholder 显示掩码
+      R1('key-no-plaintext', $('llmKey').value === '' && $('llmKey').placeholder.includes('sk-***9b4') && $('llmKey').placeholder.includes('已保存'));
+      R1('clear-btn-visible', $('llmClearBtn').style.display === 'inline-flex');
       R1('sec-title', !!document.querySelector('.modal-sec-title') && document.querySelector('.modal-sec-title').textContent.includes('LLM'));
 
+      // 切 opencode（未配置）：placeholder 未配置、无清除按钮
       $('llmProvider').value = 'opencode';
       onProviderChange();
-      await tick(50);
+      await tick(60);
       R1('switch-base-opencode', $('llmBase').value === 'https://opencode.ai/zen/go/v1');
-      R1('switch-key-opencode', $('llmKey').value === 'sk-o');
+      R1('switch-key-unset', $('llmKey').value === '' && $('llmKey').placeholder.includes('未配置') && $('llmClearBtn').style.display === 'none');
 
+      // 取消：恢复 deepseek + 掩码
       closeSettings(true);
-      await tick(30);
+      await tick(40);
       R1('cancel-closes', $('settingsModal').style.display === 'none');
       R1('cancel-restore-provider', $('llmProvider').value === 'deepseek');
-      R1('cancel-restore-key', $('llmKey').value === 'sk-d');
-      R1('cancel-restore-base', $('llmBase').value === 'https://api.deepseek.com/v1');
+      R1('cancel-restore-mask', $('llmKey').placeholder.includes('sk-***9b4'));
 
-      // 保存路径：改 key + 模型 → 保存
+      // 输入草稿 → 清除按钮隐藏 → 保存提交草稿
       openSettings();
-      await tick(50);
-      $('llmKey').value = 'sk-new';
-      $('llmModel').value = 'deepseek-reasoner';
+      await tick(60);
+      $('llmKey').value = 'sk-draft-1';
+      $('llmKey').dispatchEvent(new Event('input', { bubbles: true }));
+      await tick(30);
+      R1('typing-hides-clear', $('llmClearBtn').style.display === 'none');
       await saveSettings();
-      await tick(120);
+      await tick(150);
       R1('save-closes', $('settingsModal').style.display === 'none');
       return out;
     })();
   `);
   results.push(...part1);
 
-  // ---- 保存断言（主进程读 lastSaved）----
+  // ---- 保存载荷断言（主进程读 stub 收到的原始提交）----
   const saved = lastSaved && lastSaved.llm;
-  R('save-payload', !!(saved && saved.api_key === 'sk-new' && saved.keys.deepseek === 'sk-new' && saved.model === 'deepseek-reasoner'),
-    saved ? saved.model : 'no-save');
+  R('save-submits-draft', !!(saved && saved.api_key === 'sk-draft-1'), saved ? saved.api_key : 'no-save');
+  R('save-no-keys-map', !(saved && saved.keys), 'keys should not be submitted from renderer');
 
-  // ---- 第二段：Esc 关闭 / regex 隐藏 / 重新打开供截图 ----
+  // ---- 第二段：Esc 关闭 / regex 下入口可见 / 重新打开供截图 ----
   const part2 = await win.webContents.executeJavaScript(`
     (async () => {
       const $ = id => document.getElementById(id);
@@ -111,9 +120,9 @@ app.whenReady().then(async () => {
       const out = [];
 
       openSettings();
-      await tick(40);
+      await tick(50);
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-      await tick(30);
+      await tick(40);
       out.push({ name: 'esc-closes', ok: $('settingsModal').style.display === 'none' });
 
       $('mode').value = 'regex';

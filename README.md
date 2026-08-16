@@ -73,6 +73,7 @@ npx electron-builder --win portable   # 打包 → dist/发票识别重命名.ex
 - 绝不覆盖已有文件（冲突自动加 `_1`、`_2`）
 - 每次批量重命名写入 `undo_log.json`，一键撤销
 - 完全本地运行，发票数据不出本机（LLM 模式除外，需自行配置 API Key）
+- **API Key 加密落盘**：用 Windows 系统加密（Electron safeStorage，底层 DPAPI 账户级加密）存为 `enc:` 密文，磁盘不存明文；即使把 `%APPDATA%\invoice-renamer` 整个拷到别的电脑/账户也解不开，需重新输入。界面只显示掩码（如 `sk-***9b4`），输入框留空=保留原 Key，点「清除」=删除
 
 ## 项目结构
 

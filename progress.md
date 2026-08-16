@@ -1,5 +1,28 @@
 # 进度日志
 
+## 会话：2026-08-16（v2.5：API key 加密落盘）
+
+### 阶段 14（safeStorage/DPAPI 加密，明文只在主进程内存）
+- **状态：** complete
+- 执行的操作：
+  1. **lib/secret.js**：Electron safeStorage 封装（Windows=DPAPI 账户级加密），值格式 `enc:<base64>`；`encrypt`/`decrypt`/`isEncrypted`/`mask`；decrypt 对明文透传（迁移期兜底）、密文损坏返回 null（换电脑/账户场景）；注入式设计可纯 node 单测
+  2. **config.js**：saveConfig 写盘前 encryptKeys 自动加密（enc: 跳过；加密失败删该项宁不落明文）；遗留 `llm.api_key` 单字段保存时删除（keys 为准）
+  3. **main.js**：config:get 返回脱敏视图（keys → {masked,has}，渲染层永无明文）；config:save 语义（''=保留原 key / '__clear__'=删除 / 其他=新值加密）；llm:list-models 未传新 key 时主进程用已保存解密 key；启动 migrateLegacyKey 把旧 api_key 单字段迁入 keys[provider] 加密
+  4. **renderer**：keyStates 掩码态 + placeholder「sk-***9b4（已保存，留空则保留）」+「清除」按钮；keyDraft 草稿暂存（切换 provider 不丢输入，draft 不进配置不落盘）；输入即写 draft 并隐藏清除按钮；collectSettings 不再提交 keys map
+- 创建/修改的文件：
+  - electron/lib/secret.js（新）、config.js、main.js、renderer/index.html
+  - electron/scripts/verify-secret.js（新：真实 safeStorage + 临时目录）、migrate-real-config.js（新：真实配置一次性加密迁移）
+  - verify-settings.js（断言改为掩码语义）、README.md、findings.md
+- 验证：
+  - verify-secret.js 14/14：磁盘无明文/enc: 前缀/往返一致/损坏密文→null/遗留字段清除/模板不受影响/空 keys 正常
+  - verify-settings.js 19/19：掩码不回填明文/清除按钮显隐/草稿提交载荷/渲染层不提交 keys map/Esc/正则模式入口可见
+  - extractor 回归 5/5；--smoke ALL_OK（真实配置已是密文，主进程解密路径正常）
+  - 真实配置迁移：BEFORE 明文 → AFTER enc: 密文，api_key 字段清除，解密往返 matches，模板完好
+- 遇到的问题：
+  - **独立 electron 脚本的 userData = %APPDATA%\Electron（默认应用名）≠ 真实 %APPDATA%\invoice-renamer** → 首次写 migrate 脚本指向了错目录（还顺带在 %APPDATA%\Electron\data 写了个默认配置垃圾文件，已删除）→ 修复：脚本顶部 `app.setName('invoice-renamer')` 与 package.json name 一致
+  - mask 断言两次算错星号数（字符串长度数错）→ 用 `'*'.repeat(len)` 计算避免手数
+  - 输入 key 后清除按钮不消失 → input 监听里补 applyKeyField 即时刷新按钮态
+
 ## 会话：2026-08-16（v2.4：全局设置弹窗）
 
 ### 阶段 13（LLM 配置移入二级设置界面）

@@ -46,7 +46,7 @@
 | pdfjs 双栏版式「名称:」独立一行 | 列解析支持同行 + 下一行两种布局，并清除拆字残留（买/售） |
 | npm 12 阻止 electron postinstall 脚本 | 手动 node node_modules/electron/install.js + npmmirror 镜像 |
 | **防复制水印 PDF：标签字重复 3 遍**（发票号码→发发发票票票号号号码码码） | `_dedup()` 折叠连续重复字；原始文本匹配不到的字段用折叠文本再解析（原始优先，保护合法叠字） |
-| **API key 明文存 config.yaml** | `crypto_util.py` Windows DPAPI（CryptProtectData）加密落盘 `enc:` 密文；GET 只回传脱敏值；未传 key 保留、`__clear__` 清除；Electron 版 key 仍明文（待改 main.js + 重打包） |
+| **API key 明文存 config.yaml** | Web 版 `crypto_util.py` DPAPI 加密 `enc:` 密文；**Electron 版 v2.5 已解决**：`lib/secret.js` 用 Electron safeStorage（Windows=DPAPI）加密落盘，明文只在主进程内存；渲染层只给掩码；旧明文自动迁移 |
 
 ## 资源
 - 数电票字段布局参考：发票号码/开票日期在票面顶部，销售方/购买方分列两侧，价税合计在右下

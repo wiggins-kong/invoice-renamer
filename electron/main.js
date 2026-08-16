@@ -1,5 +1,5 @@
 // Electron 主进程：窗口管理 + 文件系统/解析/重命名/LLM IPC
-const { app, BrowserWindow, dialog, ipcMain, nativeTheme, Menu } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, nativeTheme, Menu, safeStorage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -7,6 +7,7 @@ const { parsePdf, FIELD_LABELS, KEY_FIELDS, emptyFields } = require('./lib/extra
 const renamer = require('./lib/renamer');
 const configLib = require('./lib/config');
 const llm = require('./lib/llm');
+const secret = require('./lib/secret');
 
 // 数据目录：%APPDATA%\发票识别重命名（portable exe 自解压到临时目录，
 // 不能用 exe 所在位置；userData 是桌面应用标准做法，持久保留）
@@ -25,9 +26,58 @@ function keyOf(err) {
 // hybrid 模式缺任一触发字段时调用 LLM 补全
 const LLM_TRIGGER_FIELDS = [...KEY_FIELDS, 'seller', 'buyer'];
 
+// 明文 key 视图：仅主进程内存使用（LLM 调用），绝不下发渲染层、绝不写盘
+function llmConfigWithPlainKeys() {
+  const cfg = configLib.loadConfig();
+  const l = cfg.llm || {};
+  const keys = l.keys || {};
+  const plain = {};
+  for (const k of Object.keys(keys)) {
+    const d = secret.decrypt(keys[k]);
+    if (d !== null && d !== undefined) plain[k] = d;
+  }
+  const provider = l.provider || 'deepseek';
+  const api_key = plain[provider] || (l.api_key && secret.decrypt(l.api_key)) || '';
+  return { ...l, keys: plain, api_key };
+}
+
+// 渲染层视图：key 全部脱敏为 { masked, has }，不含任何原文
+function maskConfig(cfg) {
+  const out = JSON.parse(JSON.stringify(cfg));
+  const l = out.llm || {};
+  const keys = l.keys || {};
+  const maskedKeys = {};
+  for (const k of Object.keys(keys)) {
+    const d = secret.decrypt(keys[k]); // 兼容旧明文配置（迁移期）
+    maskedKeys[k] = d ? { masked: secret.mask(d), has: true } : { masked: '', has: false };
+  }
+  l.keys = maskedKeys;
+  l.api_key = '';
+  return out;
+}
+
+const CLEAR_MARKER = '__clear__'; // 渲染层提交该值 = 删除已保存的 key
+
+// 旧配置迁移：llm.api_key（明文单字段）→ keys[provider]（加密）；saveConfig 会删掉遗留 api_key
+function migrateLegacyKey() {
+  try {
+    const cfg = configLib.loadConfig();
+    const l = cfg.llm || {};
+    const provider = l.provider || 'deepseek';
+    if (l.api_key && !(l.keys && l.keys[provider])) {
+      const keys = { ...(l.keys || {}) };
+      keys[provider] = secret.encrypt(l.api_key);
+      configLib.saveConfig({ llm: { keys } });
+      console.log('MIGRATED legacy api_key -> encrypted keys.' + provider);
+    }
+  } catch (e) {
+    console.warn('migrateLegacyKey skipped:', e.message);
+  }
+}
+
 async function parseItems(paths, cfg) {
   const mode = (cfg.extraction && cfg.extraction.mode) || 'hybrid';
-  const llmCfg = cfg.llm || {};
+  const llmCfg = llmConfigWithPlainKeys(); // 明文 key 只在主进程内存
   const items = [];
   for (const p of paths) {
     const res = await parsePdf(p);
@@ -111,8 +161,28 @@ function createWindow() {
 }
 
 function registerIpc() {
-  ipcMain.handle('config:get', () => configLib.loadConfig());
-  ipcMain.handle('config:save', (_e, cfg) => configLib.saveConfig(cfg));
+  // config:get 下发脱敏视图：keys → {masked, has}，渲染层拿不到明文
+  ipcMain.handle('config:get', () => maskConfig(configLib.loadConfig()));
+
+  // config:save：llm.api_key 语义 = '' 保留原 key / '__clear__' 删除 / 其他为新值（加密落盘）
+  ipcMain.handle('config:save', (_e, cfg) => {
+    const cur = configLib.loadConfig();
+    const keys = { ...(cur.llm.keys || {}) };
+    const p = cfg && cfg.llm && cfg.llm.provider;
+    if (p) {
+      const v = String((cfg.llm && cfg.llm.api_key) || '');
+      if (v === CLEAR_MARKER) {
+        delete keys[p];
+      } else if (v && v !== '') {
+        keys[p] = secret.encrypt(v); // 新明文 → 立即加密；加密不可用会抛错，由调用方看到
+      }
+      // ''/undefined → 保留原 keys[p]
+    }
+    const out = JSON.parse(JSON.stringify(cfg || {}));
+    out.llm = { ...(out.llm || {}), provider: p, keys };
+    delete out.llm.api_key; // 单一字段不再落盘（keys 为准）
+    return configLib.saveConfig(out);
+  });
 
   ipcMain.handle('pick:dir', async () => {
     const r = await dialog.showOpenDialog({ properties: ['openDirectory'], title: '选择发票所在文件夹' });
@@ -148,7 +218,12 @@ function registerIpc() {
   // 获取模型列表（OpenAI 兼容 /models 接口）
   ipcMain.handle('llm:list-models', async (_e, opts) => {
     const base = String((opts && opts.base_url) || '').trim().replace(/\/+$/, '');
-    const key = String((opts && opts.api_key) || '');
+    let key = String((opts && opts.api_key) || '');
+    // 渲染层只持有草稿/掩码：未显式传新 key 时，主进程用已保存的解密 key
+    if (!key && opts && opts.provider) {
+      const plain = llmConfigWithPlainKeys();
+      key = plain.keys[String(opts.provider)] || '';
+    }
     if (!base) return { models: [], error: 'Base URL 为空' };
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 15000);
@@ -170,7 +245,9 @@ function registerIpc() {
 
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null); // 无边框自绘标题栏，移除默认菜单
+  secret.init(safeStorage);      // API key 加密：Windows 上 = DPAPI 账户级加密
   configLib.setDataDir(resolveDataDir());
+  migrateLegacyKey();            // 旧配置：api_key 单字段 → keys[provider] 加密
   registerIpc();
   if (process.argv.includes('--screenshot')) {
     // 截图模式（开发验证用）：注入演示数据 → 截图 → 退出
