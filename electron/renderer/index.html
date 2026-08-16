@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>发票识别重命名</title>
+<style>
+  /* ============ 自定义字体（微软雅黑 Semibold，全部 UI 文本） ============ */
+  @font-face {
+    font-family: 'MsyhSb';
+    src: url('assets/msyh-semibold.ttf') format('truetype');
+    font-weight: 400 700;
+    font-display: swap;
+  }
+
+  /* ============ 设计令牌（浅色优先） ============ */
+  :root {
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --surface-2: #f2f4f7;
+    --surface-3: #e9edf3;
+    --border: #e3e7ee;
+    --border-strong: #d0d6e0;
+    --text: #171a21;
+    --text-2: #5b6474;
+    --text-3: #8b94a6;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --accent-soft: #eaf1fe;
+    --accent-soft-strong: #d6e4fd;
+    --accent-text: #1d4ed8;
+    --on-accent: #ffffff;
+    --ok: #169a4a;   --ok-soft: #e6f6ec;
+    --warn: #c07f1a; --warn-soft: #fbf1e0;
+    --err: #d93a43;  --err-soft: #fcecec;
+    --focus: 0 0 0 3px rgba(37, 99, 235, .22);
+    --shadow-sm: 0 1px 2px rgba(16, 24, 40, .04);
+    --shadow-md: 0 6px 20px rgba(16, 24, 40, .10);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --mono: 'MsyhSb', 'Cascadia Code', Consolas, 'Courier New', monospace;
+  }
+  [data-theme="dark"] {
+    --bg: #0c1017;
+    --surface: #131a26;
+    --surface-2: #1a2233;
+    --surface-3: #212b40;
+    --border: #232d40;
+    --border-strong: #33415c;
+    --text: #e7ebf3;
+    --text-2: #98a3b6;
+    --text-3: #66738c;
+    --accent: #5b8def;
+    --accent-hover: #7aa2f5;
+    --accent-soft: #1b2948;
+    --accent-soft-strong: #243763;
+    --accent-text: #8ab0f8;
+    --on-accent: #ffffff;
+    --ok: #34d399;   --ok-soft: #0f2a1d;
+    --warn: #fbbf24; --warn-soft: #2b2110;
+    --err: #f87171;  --err-soft: #2d1518;
+    --focus: 0 0 0 3px rgba(91, 141, 239, .30);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, .28);
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, .42);
+  }
+
+  /* ============ 基础 ============ */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 14px/1.55 'MsyhSb', 'Microsoft YaHei', 'Segoe UI', system-ui, sans-serif;
+    user-select: none; overflow: hidden;
+    display: flex; flex-direction: column;
+    transition: background .18s ease, color .18s ease;
+  }
+  button { font: inherit; }
+  input, select { font: inherit; }
+
+  /* ============ 双栏工作台 ============ */
+  .app { display: flex; gap: 16px; flex: 1; min-height: 0; width: 100%; padding: 18px; max-width: 1500px; margin: 0 auto; }
+  .sidebar { width: 300px; flex-shrink: 0; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; padding-right: 2px; }
+  .main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
+
+  /* ============ 自绘标题栏（无边框窗口） ============ */
+  .titlebar {
+    height: 40px; flex-shrink: 0;
+    display: flex; align-items: center;
+    -webkit-app-region: drag;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding-left: 14px; padding-right: 8px;
+  }
+  .tb-brand { display: flex; align-items: center; gap: 9px; min-width: 0; }
+  .tb-logo {
+    width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: #fff;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, .25);
+  }
+  .tb-title { font-size: 13.5px; font-weight: 600; letter-spacing: .01em; }
+  .tb-sub { font-size: 11.5px; color: var(--text-3); }
+  .tb-controls { margin-left: auto; display: flex; align-items: center; -webkit-app-region: no-drag; }
+  .tb-controls button {
+    width: 44px; height: 40px; display: flex; align-items: center; justify-content: center;
+    background: transparent; border: none; color: var(--text-2); cursor: default;
+    transition: background .12s, color .12s;
+  }
+  .tb-controls button:hover { background: rgba(0, 0, 0, .05); color: var(--text); }
+  [data-theme="dark"] .tb-controls button:hover { background: rgba(255, 255, 255, .09); }
+  .tb-controls #tbClose:hover { background: var(--err); color: #fff; }
+  .tb-controls .icon-restore { display: none; }
+  body.maximized .tb-controls .icon-max { display: none; }
+  body.maximized .tb-controls .icon-restore { display: block; }
+
+  /* ============ 卡片 ============ */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow-sm);
+    padding: 15px 16px;
+  }
+  .card-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+  .card-head h2 { font-size: 13.5px; font-weight: 650; color: var(--text); letter-spacing: .01em; }
+  .card-head .muted { margin-left: auto; }
+
+  /* ============ 表单 ============ */
+  .field { margin-bottom: 11px; }
+  .field:last-child { margin-bottom: 0; }
+  label.f { display: block; font-size: 12px; color: var(--text-2); margin-bottom: 5px; font-weight: 500; }
+  input[type=text], input[type=password], select {
+    width: 100%; background: var(--surface-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 7px 10px; font-size: 13px; outline: none;
+    transition: border-color .15s, box-shadow .15s, background .15s;
+  }
+  input:focus, select:focus { border-color: var(--accent); box-shadow: var(--focus); background: var(--surface); }
+  select { cursor: pointer; }
+  .row-ctl { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-bottom: 9px; }
+  .row-ctl input[type=text] { width: auto; }
+  .sep-grp { margin-right: 2px; }
+
+  /* ============ 按钮 ============ */
+  .btn {
+    display: inline-flex; align-items: center; gap: 5px; justify-content: center;
+    background: var(--accent); color: var(--on-accent); border: 1px solid transparent;
+    border-radius: var(--radius-sm); padding: 7px 13px; font-size: 13px; font-weight: 550;
+    cursor: pointer; transition: background .15s, border-color .15s, box-shadow .15s, color .15s, transform .05s;
+  }
+  .btn:hover { background: var(--accent-hover); }
+  .btn:active { transform: translateY(1px); }
+  .btn:focus-visible { box-shadow: var(--focus); outline: none; }
+  .btn-soft { background: var(--accent-soft); color: var(--accent-text); border-color: var(--accent-soft-strong); }
+  .btn-soft:hover { background: var(--accent-soft-strong); color: var(--accent-text); }
+  .btn-ghost { background: transparent; color: var(--text-2); border-color: var(--border); }
+  .btn-ghost:hover { color: var(--text); border-color: var(--border-strong); background: var(--surface-2); }
+  .btn-danger { background: var(--err); }
+  .btn-danger:hover { filter: brightness(1.06); }
+  .btn-lg { padding: 10px 18px; font-size: 14px; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .card-foot { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+  /* ============ 模板拼接器 ============ */
+  .chips {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-height: 48px;
+    background: var(--surface-2); border: 1.5px dashed var(--border-strong);
+    border-radius: var(--radius-sm); padding: 10px 12px; margin: 2px 0 11px;
+    transition: border-color .15s, background .15s;
+  }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--accent-soft); border: 1px solid var(--accent-soft-strong);
+    color: var(--accent-text); border-radius: 999px; padding: 5px 8px 5px 13px;
+    font-size: 13px; cursor: grab;
+    transition: box-shadow .15s, opacity .15s, border-color .15s;
+  }
+  /* 抓握点：两列圆点提示可拖拽 */
+  .chip::before {
+    content: ''; width: 8px; height: 13px; flex-shrink: 0; margin-right: 1px;
+    background: radial-gradient(circle, currentColor 1.15px, transparent 1.25px) 0 0 / 4px 4px repeat;
+    opacity: .4;
+  }
+  .chip:hover { box-shadow: var(--shadow-sm); }
+  .chip:active { cursor: grabbing; }
+  /* 拖起：源 chip 本体变成虚线槽位（落点），原生拖影跟随光标 */
+  .chip.dragging {
+    background: transparent; border: 1.5px dashed var(--accent);
+    color: transparent; box-shadow: none; cursor: grabbing;
+  }
+  .chip.dragging::before { opacity: 0; }
+  .chip.dragging button { opacity: 0; pointer-events: none; }
+  .chip.sep { background: var(--surface-3); border-color: var(--border-strong); color: var(--text-2); font-family: var(--mono); }
+  .chip .tag { font-size: 10px; opacity: .75; letter-spacing: .02em; }
+  .chip button {
+    background: transparent; border: none; color: inherit; opacity: .55;
+    width: 18px; height: 18px; border-radius: 50%; cursor: pointer; font-size: 11px; line-height: 1;
+  }
+  .chip button:hover { opacity: 1; background: rgba(0,0,0,.08); color: var(--err); }
+  [data-theme="dark"] .chip button:hover { background: rgba(255,255,255,.12); }
+
+  .preview {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 10px 12px;
+    font-family: var(--mono); font-size: 12.5px; color: var(--accent-text); word-break: break-all;
+  }
+  .preview .hint { color: var(--text-3); font-family: inherit; font-size: 11.5px; margin-top: 5px; }
+
+  /* ============ 拖拽区 ============ */
+  .drop {
+    border: 2px dashed var(--border-strong); border-radius: var(--radius);
+    padding: 34px 24px; text-align: center; cursor: pointer;
+    transition: border-color .18s, background .18s, transform .1s;
+    background: var(--surface-2);
+  }
+  .drop:hover, .drop.over { border-color: var(--accent); background: var(--accent-soft); }
+  .drop-icon { display: flex; justify-content: center; margin-bottom: 8px; }
+  .drop-title { font-size: 15px; font-weight: 600; margin-bottom: 3px; }
+  .drop .muted { font-size: 12px; }
+  .pick-row { display: flex; gap: 10px; margin-top: 13px; }
+
+  /* ============ 表格 ============ */
+  .tbl-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th {
+    text-align: left; color: var(--text-3); font-weight: 600; font-size: 11.5px;
+    padding: 9px 12px; border-bottom: 1px solid var(--border);
+    background: var(--surface-2); white-space: nowrap; position: sticky; top: 0;
+  }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface-2); }
+  .fname { font-family: var(--mono); font-size: 12px; color: var(--text-2); word-break: break-all; }
+  .new {
+    width: 100%; min-width: 230px; background: var(--surface); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; font-size: 12.5px; outline: none;
+    font-family: var(--mono); resize: none; overflow-y: hidden; line-height: 1.5;
+    word-break: break-all; white-space: pre-wrap;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .new:focus { border-color: var(--accent); box-shadow: var(--focus); }
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 550; white-space: nowrap; }
+  .badge.ok { background: var(--ok-soft); color: var(--ok); }
+  .badge.partial { background: var(--warn-soft); color: var(--warn); }
+  .badge.failed { background: var(--err-soft); color: var(--err); }
+  .fchip {
+    display: inline-block; background: var(--surface-3); border-radius: 5px;
+    padding: 1px 7px; margin: 1px 2px; font-size: 11.5px; color: var(--text-2);
+  }
+  .fchip b { color: var(--accent-text); font-weight: 600; margin-right: 3px; }
+  .ferr { color: var(--err); font-size: 11.5px; margin-top: 2px; }
+  .expand-btn {
+    background: none; border: none; color: var(--accent-text); cursor: pointer;
+    font-size: 11.5px; padding: 3px 2px 0; font-weight: 550;
+  }
+  .expand-btn:hover { text-decoration: underline; }
+  /* 底部合计行 */
+  tfoot td {
+    background: var(--accent-soft); border-top: 1px solid var(--border-strong);
+    font-size: 12.5px; color: var(--text); white-space: nowrap;
+  }
+  .totals .sum { font-weight: 700; color: var(--accent-text); }
+  .totals .sum b { font-weight: 700; }
+  .totals .na { color: var(--warn); font-weight: 500; margin-left: 12px; }
+  .rm-btn {
+    background: transparent; border: 1px solid var(--border); color: var(--text-3);
+    width: 24px; height: 24px; border-radius: 6px; cursor: pointer; font-size: 12px; line-height: 1;
+    transition: color .15s, border-color .15s, background .15s;
+  }
+  .rm-btn:hover { color: var(--err); border-color: var(--err); background: var(--err-soft); }
+
+  /* ============ 操作条 ============ */
+  .actions { display: flex; gap: 9px; margin-top: 13px; align-items: center; flex-wrap: wrap; }
+  .spacer { flex: 1; }
+
+  /* ============ 杂项 ============ */
+  .muted { color: var(--text-3); font-size: 12px; }
+  .hint-muted { color: var(--text-3); font-size: 11.5px; margin-left: 6px; }
+  #toast {
+    position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%);
+    background: var(--surface); color: var(--text); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 18px; font-size: 13px; display: none; z-index: 99;
+    box-shadow: var(--shadow-md); animation: toast-in .18s ease;
+  }
+  @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 6px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+  @media (max-width: 1080px) { .sidebar { width: 300px; } }
+</style>
+</head>
+<body data-theme="light">
+<!--
+  THESIS: 明亮清爽的现代工作台 —— 白+蓝、轻盈通透（Notion/Linear 气质），拒绝旧版灰面板的堆叠感。
+  OWN-WORLD: 浅色优先的克制配色（中性灰底 + 白卡片 + 单一蓝强调色），系统字体栈，12px 圆角、细边框 + 柔和阴影；暗色主题为精心反转的同源世界。
+  STORY: 打开即懂 —— 左栏配好命名规则，右栏把发票拖进来，识别结果与建议文件名即刻呈现，一键重命名。
+  FIRST VIEWPORT: 左栏窄侧（品牌头 + 设置卡片 + 模板拼接器卡片）；右栏主区以大拖拽区为首屏主角，下方为识别结果表格与操作条。
+  FORM: 双栏工作台 + 明亮现代工作台视觉世界（用户钉选方向，beat roll；代码构建，无 comp）。
+  FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
+-->
+<div class="titlebar">
+  <div class="tb-brand">
+    <div class="tb-logo" aria-hidden="true">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+        <rect x="5.2" y="3.6" width="13.6" height="16.8" rx="2.4" fill="#ffffff"/>
+        <rect x="3.8" y="8.2" width="16.4" height="3.8" rx="1.4" fill="#2563EB"/>
+        <rect x="7.6" y="14" width="8.4" height="1.9" rx="0.95" fill="#C3CFE8"/>
+        <rect x="7.6" y="17.2" width="6.4" height="1.9" rx="0.95" fill="#C3CFE8"/>
+      </svg>
+    </div>
+    <span class="tb-title">发票识别重命名</span>
+    <span class="tb-sub">桌面版 · 原地重命名 · 支持撤销</span>
+  </div>
+  <div class="tb-controls">
+    <button id="tbMin" title="最小化"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M1 6h10" stroke="currentColor" stroke-width="1.2"/></svg></button>
+    <button id="tbMax" title="最大化">
+      <svg class="icon-max" width="12" height="12" viewBox="0 0 12 12"><rect x="1.5" y="1.5" width="9" height="9" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+      <svg class="icon-restore" width="12" height="12" viewBox="0 0 12 12"><rect x="1.5" y="3.5" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M4.5 3.5V2.2A1.7 1.7 0 0 1 6.2.5h3.6A1.7 1.7 0 0 1 11.5 2.2v3.6a1.7 1.7 0 0 1-1.7 1.7H8.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+    </button>
+    <button id="tbClose" title="关闭"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button>
+  </div>
+</div>
+
+<div class="app">
+
+  <!-- ================= 左栏 ================= -->
+  <aside class="sidebar">
+    <!-- 设置 -->
+    <section class="card">
+      <div class="card-head"><h2>解析与重命名设置</h2></div>
+
+      <div class="field">
+        <label class="f" for="mode">提取模式</label>
+        <select id="mode" onchange="onModeChange()">
+          <option value="hybrid">混合（正则优先，缺字段走 LLM）</option>
+          <option value="regex">仅本地正则（离线，不调 LLM）</option>
+          <option value="llm">仅 LLM（全部字段走大模型）</option>
+        </select>
+      </div>
+
+      <div id="llmRow">
+        <div class="field">
+          <label class="f" for="llmProvider">LLM 提供商</label>
+          <select id="llmProvider" onchange="onProviderChange()">
+            <option value="deepseek">DeepSeek</option>
+            <option value="opencode">OpenCode Go</option>
+            <option value="custom">自定义（OpenAI 兼容）</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="f" for="llmBase">Base URL</label>
+          <input type="text" id="llmBase" placeholder="https://api.deepseek.com/v1">
+        </div>
+        <div class="field">
+          <label class="f" for="llmModel">模型</label>
+          <div class="row-ctl" style="margin-bottom:0">
+            <span id="llmModelWrap" style="flex:1; display:block">
+              <input type="text" id="llmModel" list="modelList" placeholder="点↻刷新获取模型">
+            </span>
+            <button class="btn btn-soft btn-sm" onclick="fetchModels(true)" title="从 {Base URL}/models 拉取模型列表">↻ 刷新</button>
+            <datalist id="modelList"></datalist>
+          </div>
+        </div>
+        <div class="field">
+          <label class="f" for="llmKey">API Key</label>
+          <input type="password" id="llmKey" placeholder="sk-...">
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="f" for="theme">界面主题</label>
+        <select id="theme" onchange="applyTheme(); saveConfig()">
+          <option value="system">跟随系统</option>
+          <option value="light">亮色</option>
+          <option value="dark">暗色</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="f" for="conflict">重名冲突</label>
+        <select id="conflict">
+          <option value="suffix">自动加 _1/_2 后缀</option>
+          <option value="skip">跳过并提示</option>
+        </select>
+      </div>
+
+      <div class="muted" id="modeHint"></div>
+      <div class="card-foot">
+        <button class="btn" onclick="saveConfig()">保存设置</button>
+        <span class="muted" id="saveHint"></span>
+      </div>
+    </section>
+  </aside>
+
+  <!-- ================= 右栏 ================= -->
+  <main class="main">
+
+    <!-- 命名模板 -->
+    <section class="card">
+      <div class="card-head"><h2>命名模板</h2><span class="muted">按住拖拽排序</span></div>
+
+      <div class="row-ctl">
+        <select id="fieldSel" style="width:210px; flex:0 1 210px"></select>
+        <button class="btn btn-soft" onclick="addField()">＋ 字段</button>
+        <span class="sep-grp muted">分隔符</span>
+        <button class="btn btn-ghost" onclick="addSep('_')">_</button>
+        <button class="btn btn-ghost" onclick="addSep('-')">-</button>
+        <button class="btn btn-ghost" onclick="addSep(' ')">␣</button>
+        <button class="btn btn-ghost" onclick="addSep('.')">.</button>
+        <input type="text" id="customSep" style="width:58px" placeholder="其他">
+        <button class="btn btn-ghost" onclick="addCustomSep()">添加</button>
+        <span class="spacer"></span>
+        <label class="f" style="margin:0">预设</label>
+        <select id="preset" onchange="applyPreset()" style="width:auto">
+          <option value="default">日期_号码_销售方_金额</option>
+          <option value="dni">日期_号码_金额</option>
+          <option value="nis">号码_销售方_金额</option>
+          <option value="sda">销售方_日期_金额</option>
+          <option value="dtna">日期_票种_号码_金额</option>
+        </select>
+      </div>
+
+      <div class="chips" id="templateChips"></div>
+
+      <div class="preview" id="preview"></div>
+    </section>
+
+    <!-- 发票文件 -->
+    <section class="card">
+      <div class="card-head"><h2>发票文件</h2></div>
+      <div class="drop" id="drop">
+        <div class="drop-icon" aria-hidden="true">
+          <svg width="44" height="44" viewBox="0 0 48 48" fill="none">
+            <rect x="12" y="7" width="26" height="34" rx="4.5" fill="#ffffff" stroke="#D8E1F2" stroke-width="1.6"/>
+            <rect x="8.5" y="16" width="31" height="7" rx="2.6" fill="#2563EB"/>
+            <rect x="16" y="28" width="16" height="3" rx="1.5" fill="#C3CFE8"/>
+            <rect x="16" y="34" width="12" height="3" rx="1.5" fill="#C3CFE8"/>
+          </svg>
+        </div>
+        <div class="drop-title">把 PDF 发票文件或整个文件夹拖到这里</div>
+        <div class="muted">拖入后直接定位源文件，原地重命名，不产生副本</div>
+      </div>
+      <div class="pick-row">
+        <button class="btn btn-lg" onclick="pickAndScan()">📁 选择文件夹…</button>
+        <button class="btn btn-soft btn-lg" onclick="pickAndParse()">📄 选择文件…</button>
+      </div>
+    </section>
+
+    <!-- 识别结果 -->
+    <section class="card" id="resultPanel" style="display:none">
+      <div class="card-head"><h2>识别结果</h2><span class="muted" id="resultMeta"></span></div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th style="width:18%">原文件名</th><th>识别字段</th>
+            <th style="width:30%">新文件名（可编辑）</th><th>状态</th><th style="width:44px">移除</th>
+          </tr></thead>
+          <tbody id="tableBody"></tbody>
+          <tfoot id="tableFoot"></tfoot>
+        </table>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="renameAll()">🚀 全部重命名</button>
+        <button class="btn btn-soft" onclick="reparse()">↻ 重新解析</button>
+        <button class="btn btn-danger" onclick="undo()">↩ 撤销上次</button>
+        <span class="spacer"></span>
+        <button class="btn btn-ghost" onclick="clearList()">🗑 清空列表</button>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+let template = [];   // [{t:'field'|'sep', v:...}]
+let items = [];      // 当前解析结果
+let lastDirs = [];   // 最近处理的文件夹（用于重命名后刷新）
+let themeMode = 'system';
+let modelValue = '';   // 当前模型值（select/input 两种形态间保持）
+let llmKeys = {};      // 各提供商的 API key（provider -> key）
+let draggingIdx = -1;  // 拖拽中的模板段索引（实时重排用）
+let reorderQueued = false; // rAF 节流：一帧内最多重排一次
+let dragSeg = null;    // 被拖的模板段（对象引用）
+
+const LABELS = {
+  invoice_no: '发票号码', date: '开票日期', seller: '销售方', buyer: '购买方',
+  amount_excl: '金额', tax: '税额', amount: '价税合计', amount_cn: '金额大写', type: '票种',
+  seller_tax_id: '销售方税号', buyer_tax_id: '购买方税号'
+};
+
+const DEMO_FIELDS = {
+  invoice_no: '25512345678901234567', date: '2026年08月15日',
+  seller: '深圳市某某科技有限公司', buyer: '北京某某商贸有限公司',
+  amount_excl: '88.50', tax: '11.50', amount: '100.00', amount_cn: '壹佰元整', type: '电子普通发票',
+  seller_tax_id: '91440300MA5XXXXXX1', buyer_tax_id: '91110108XXXXXXXX2'
+};
+
+const PRESETS = {
+  default: [['field','date'],['sep','_'],['field','invoice_no'],['sep','_'],['field','seller'],['sep','_'],['field','amount']],
+  dni:     [['field','date'],['sep','_'],['field','invoice_no'],['sep','_'],['field','amount']],
+  nis:     [['field','invoice_no'],['sep','_'],['field','seller'],['sep','_'],['field','amount']],
+  sda:     [['field','seller'],['sep','_'],['field','date'],['sep','_'],['field','amount']],
+  dtna:    [['field','date'],['sep','_'],['field','type'],['sep','_'],['field','invoice_no'],['sep','_'],['field','amount']]
+};
+
+function toast(msg, ms = 3500) {
+  const t = $('toast'); t.textContent = msg; t.style.display = 'block';
+  clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', ms);
+}
+
+/* ---------- 主题 ---------- */
+function resolveTheme(mode) {
+  if (mode === 'system') return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  return mode;
+}
+function applyTheme() {
+  themeMode = $('theme').value;
+  document.documentElement.dataset.theme = resolveTheme(themeMode);
+  document.body.dataset.theme = document.documentElement.dataset.theme;
+  const mq = matchMedia('(prefers-color-scheme: dark)');
+  if (themeMode === 'system' && !mq._bound) {
+    mq._bound = true;
+    mq.addEventListener('change', () => { if (themeMode === 'system') applyTheme(); });
+  }
+}
+
+/* ---------- 配置 ---------- */
+const PROVIDER_PRESETS = {
+  deepseek: { base_url: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
+  opencode: { base_url: 'https://opencode.ai/zen/go/v1', model: 'deepseek-v4-flash' },
+  custom: { base_url: '', model: '' },
+};
+function providerDefaults(p) { return PROVIDER_PRESETS[p] || { base_url: '', model: '' }; }
+function onProviderChange() {
+  const p = $('llmProvider').value;
+  const prev = $('llmProvider').dataset.prevProvider || '';
+  const prevDef = providerDefaults(prev);
+  const curBase = $('llmBase').value.trim();
+  const curModel = modelValue.trim();
+  // 保存上一个 provider 的 key，加载新 provider 的 key（各存各的，不串）
+  if (prev && prev !== p) llmKeys[prev] = $('llmKey').value.trim();
+  $('llmKey').value = llmKeys[p] || '';
+  // Base URL / 模型：仅在空值或等于上一个提供商默认值时替换为新默认
+  if (!curBase || curBase === prevDef.base_url) $('llmBase').value = providerDefaults(p).base_url;
+  if (!curModel || curModel === prevDef.model) modelValue = providerDefaults(p).model;
+  $('llmProvider').dataset.prevProvider = p;
+  renderModelField();
+  fetchModels(false);
+}
+// 模型字段：有模型列表 → 真下拉 select（全部可见）；无列表 → 可输入文本框
+function renderModelField(list) {
+  const wrap = $('llmModelWrap');
+  const models = list || null;
+  const val = modelValue || '';
+  if (models && models.length) {
+    const opts = models.slice();
+    if (val && !opts.includes(val)) opts.unshift(val);
+    wrap.innerHTML = `<select id="llmModel" style="width:100%">${opts.map(m => `<option value="${m}">${m}</option>`).join('')}</select>`;
+    const sel = $('llmModel');
+    sel.value = val && opts.includes(val) ? val : opts[0];
+    modelValue = sel.value;
+  } else {
+    wrap.innerHTML = `<input type="text" id="llmModel" list="modelList" placeholder="点↻刷新获取模型">`;
+    $('llmModel').value = val;
+  }
+  $('llmModel').addEventListener('change', () => { modelValue = $('llmModel').value; });
+}
+async function fetchModels(showErrors) {
+  const base = $('llmBase').value.trim();
+  const key = $('llmKey').value.trim();
+  if (!base) {
+    renderModelField();
+    if (showErrors) toast('请先填写 Base URL');
+    return;
+  }
+  try {
+    const res = await window.invoiceAPI.listModels({ base_url: base, api_key: key });
+    if (res.error) throw new Error(res.error);
+    const list = res.models || [];
+    if (showErrors) toast(list.length ? `已获取 ${list.length} 个模型` : '该服务没有返回模型列表', 4000);
+    renderModelField(list);
+  } catch (e) {
+    renderModelField();
+    if (showErrors) toast('获取模型列表失败：' + e.message, 5000);
+  }
+}
+function onModeChange() {
+  const m = $('mode').value;
+  $('llmRow').style.display = m === 'regex' ? 'none' : 'block';
+  const hints = {
+    regex: '当前：仅本地正则 — 离线运行，不调用任何 LLM，无需 API Key。',
+    hybrid: '当前：混合模式 — 正则优先，关键字段缺失时自动调用 LLM 补全。',
+    llm: '当前：仅 LLM — 所有字段都由大模型提取，需要配置 API Key。'
+  };
+  $('modeHint').textContent = hints[m];
+}
+function parsingToast() {
+  return {
+    regex: '解析中…（仅本地正则，不调用 LLM）',
+    hybrid: '解析中…（hybrid 模式，缺字段才调 LLM，请稍候）',
+    llm: '解析中…（LLM 模式，请稍候）'
+  }[$('mode').value];
+}
+function collectSettings() {
+  const p = $('llmProvider').value;
+  llmKeys[p] = $('llmKey').value.trim();
+  return {
+    extraction: { mode: $('mode').value },
+    llm: {
+      provider: p,
+      base_url: $('llmBase').value.trim(),
+      model: modelValue || $('llmModel').value.trim(),
+      api_key: llmKeys[p] || '',
+      keys: llmKeys,
+    },
+    naming: { template: template, output: 'inplace', conflict: $('conflict').value },
+    ui: { theme: $('theme').value }
+  };
+}
+async function loadConfig() {
+  const cfg = await window.invoiceAPI.getConfig();
+  $('mode').value = cfg.extraction.mode;
+  $('llmProvider').value = cfg.llm.provider === 'custom' ? 'custom' : (cfg.llm.provider || 'deepseek');
+  $('llmProvider').dataset.prevProvider = $('llmProvider').value;
+  $('llmBase').value = cfg.llm.base_url;
+  modelValue = cfg.llm.model || '';
+  llmKeys = { ...(cfg.llm.keys || {}) };
+  const p = $('llmProvider').value;
+  if (!llmKeys[p] && cfg.llm.api_key) llmKeys[p] = cfg.llm.api_key; // 兼容旧配置（单一 key 迁移到按提供商）
+  $('llmKey').value = llmKeys[p] || '';
+  $('conflict').value = cfg.naming.conflict;
+  $('theme').value = (cfg.ui && cfg.ui.theme) || 'system';
+  template = cfg.naming.template || PRESETS.default;
+  renderModelField();
+  renderTemplate();
+  onModeChange();
+  applyTheme();
+  fetchModels(false); // 静默尝试拉取模型列表
+}
+async function saveConfig(silent) {
+  try {
+    await window.invoiceAPI.saveConfig(collectSettings());
+    if (!silent) {
+      $('saveHint').textContent = '✓ 已保存 ' + new Date().toLocaleTimeString();
+      toast('设置已保存');
+    }
+  } catch (e) {
+    if (!silent) toast('保存失败：' + e.message, 5000);
+  }
+}
+let saveTimer = null;
+function scheduleTemplateSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => saveConfig(true), 800);
+}
+
+/* ---------- 模板拼接器 ---------- */
+function renderTemplate() {
+  const box = $('templateChips'); box.innerHTML = '';
+  template.forEach((seg, i) => {
+    const d = document.createElement('span');
+    d.dataset.idx = i;
+    if (seg.t === 'field') {
+      d.className = 'chip';
+      d.innerHTML = `<span class="tag">字段</span>${LABELS[seg.v] || seg.v}`;
+    } else {
+      d.className = 'chip sep';
+      d.innerHTML = `<span class="tag">分隔</span>${seg.v === ' ' ? '␣' : seg.v}`;
+    }
+    d.draggable = true;
+    d.addEventListener('dragstart', e => {
+      draggingIdx = +d.dataset.idx;
+      dragSeg = template[draggingIdx];
+      e.dataTransfer.setData('text/plain', String(draggingIdx));
+      e.dataTransfer.effectAllowed = 'move';
+      // 原生拖影跟随光标；源 chip 本体变成虚线槽位展示落点
+      // （不隐藏拖影、不改布局 —— 避免 Chromium 取消拖拽）
+      d.classList.add('dragging');
+    });
+    d.addEventListener('dragend', () => {
+      d.classList.remove('dragging');
+      draggingIdx = -1; dragSeg = null;
+      renderTemplate(); // 归位重渲染（含自动保存）
+    });
+    d.addEventListener('dragover', e => e.preventDefault()); // 允许放置（重排统一由容器处理）
+    d.addEventListener('drop', e => { e.preventDefault(); });
+    const rm = document.createElement('button'); rm.textContent = '✕'; rm.title = '删除';
+    rm.onclick = e => { e.stopPropagation(); template.splice(+d.dataset.idx, 1); renderTemplate(); };
+    d.appendChild(rm);
+    box.appendChild(d);
+  });
+  // 容器统一处理重排（监听只绑一次）
+  if (!box._bound) {
+    box._bound = true;
+    box.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (draggingIdx === -1 || reorderQueued) return;
+      reorderQueued = true;
+      const x = e.clientX, y = e.clientY;
+      requestAnimationFrame(() => {
+        reorderQueued = false;
+        if (draggingIdx === -1) return;
+        const chips = [...box.children];
+        const dragEl = chips[draggingIdx];
+        if (!dragEl) return;
+        // 计算插入槽位（感知换行：光标在哪一行就算哪一行）
+        const insertIdx = computeInsertIdx(box, x, y, dragEl);
+        // 源 chip（虚线槽位）移到新位置，其余 chip 让位
+        let anchor = null, count = 0;
+        for (const c of chips) {
+          if (c === dragEl) continue;
+          if (count === insertIdx) { anchor = c; break; }
+          count++;
+        }
+        if (anchor) box.insertBefore(dragEl, anchor);
+        else box.appendChild(dragEl);
+        // 模板数组与 DOM 新顺序同步（按 dataset.idx 映射回原段）
+        template = [...box.children].map(c => template[+c.dataset.idx]);
+        [...box.children].forEach((c, i) => { c.dataset.idx = i; });
+        draggingIdx = template.indexOf(dragSeg);
+      });
+    });
+    box.addEventListener('drop', e => { e.preventDefault(); }); // 落点已由 dragover 定位，dragend 收尾
+  }
+
+// 计算插入槽位：按行分组，光标所在行内按中点 < x 计数，上方行全计
+function computeInsertIdx(box, x, y, dragEl) {
+  const chips = [...box.children].filter(c => c !== dragEl);
+  const rows = [];
+  for (const c of chips) {
+    const r = c.getBoundingClientRect();
+    let row = rows.find(rw => Math.abs(rw.top - r.top) <= 8);
+    if (!row) { row = { top: r.top, items: [] }; rows.push(row); }
+    row.items.push({ r });
+  }
+  rows.sort((a, b) => a.top - b.top);
+  if (!rows.length) return 0;
+  // 光标所在行 = 行顶与光标 y 最近的一行
+  let cursorRow = rows[0], best = Infinity;
+  for (const row of rows) {
+    const d = Math.abs(row.top - y);
+    if (d < best) { best = d; cursorRow = row; }
+  }
+  let idx = 0;
+  for (const row of rows) {
+    if (row === cursorRow) {
+      for (const { r } of row.items) if (r.left + r.width / 2 < x) idx++;
+      break;
+    }
+    idx += row.items.length;
+  }
+  return idx;
+}
+  renderPreview();
+  refreshSuggestedNames();
+  scheduleTemplateSave();
+}
+
+function addField() {
+  const v = $('fieldSel').value;
+  template.push({ t: 'field', v });
+  renderTemplate();
+}
+function addSep(s) { template.push({ t: 'sep', v: s }); renderTemplate(); }
+function addCustomSep() { const s = $('customSep').value; if (s) addSep(s); }
+function applyPreset() {
+  template = PRESETS[$('preset').value].map(([t, v]) => ({ t, v }));
+  renderTemplate();
+}
+function renderTemplateJS(tpl, fields) {
+  const tokens = []; let pendingSep = null;
+  for (const seg of tpl) {
+    if (seg.t === 'field') {
+      const val = (fields[seg.v] || '').trim();
+      if (val) { if (pendingSep !== null && tokens.length) tokens.push(pendingSep); pendingSep = null; tokens.push(val); }
+    } else pendingSep = seg.v;
+  }
+  return tokens.join('');
+}
+function renderPreview() {
+  const name = renderTemplateJS(template, DEMO_FIELDS);
+  $('preview').innerHTML = `示例：<b>${name}.pdf</b><div class="hint">所有字段齐全，正常拼接；字段缺失时自动跳过、分隔符自动折叠</div>`;
+}
+
+/* ---------- 文件 ---------- */
+// 文件夹拖拽：dataTransfer.files 在 Electron 中为空，
+// 必须用 webkitGetAsEntry() 递归遍历目录拿 File 对象
+function fileFromEntry(entry) {
+  return new Promise((resolve, reject) => entry.file(resolve, reject));
+}
+function readDirEntries(dirEntry) {
+  return new Promise((resolve, reject) => {
+    const reader = dirEntry.createReader();
+    const all = [];
+    const readBatch = () => {
+      reader.readEntries(async entries => {
+        if (!entries.length) { resolve(all); return; }
+        for (const ent of entries) {
+          if (ent.isFile) all.push(await fileFromEntry(ent));
+          else if (ent.isDirectory) all.push(...await readDirEntries(ent));
+        }
+        readBatch(); // Chromium 要求重复调用直到返回空
+      }, reject);
+    };
+    readBatch();
+  });
+}
+async function collectDroppedPaths(e) {
+  const paths = [];
+  const seen = new Set();
+  const addPath = p => { if (p && !seen.has(p)) { seen.add(p); paths.push(p); } };
+  let sawDir = false;
+  // 通道 1：dataTransfer.files（多文件拖入时非空，File 对象带绝对路径）
+  // 注意：文件夹拖入时 files 为空，必须走通道 2 的 entry 递归
+  for (const f of (e.dataTransfer.files || [])) {
+    if (/\.pdf$/i.test(f.name)) addPath(window.invoiceAPI.getPathForFile(f));
+  }
+  // 通道 2：items → webkitGetAsEntry（文件夹需要递归遍历子目录）
+  const items = [...(e.dataTransfer.items || [])];
+  for (const item of items) {
+    const entry = item.webkitGetAsEntry && item.webkitGetAsEntry();
+    if (!entry) continue;
+    if (entry.isFile) {
+      const f = await fileFromEntry(entry);
+      if (/\.pdf$/i.test(f.name)) addPath(window.invoiceAPI.getPathForFile(f));
+    } else if (entry.isDirectory) {
+      sawDir = true;
+      const files = await readDirEntries(entry);
+      for (const f of files) {
+        if (/\.pdf$/i.test(f.name)) addPath(window.invoiceAPI.getPathForFile(f));
+      }
+    }
+  }
+  return { paths, sawDir };
+}
+function setupDrop() {
+  const drop = $('drop');
+  ['dragover', 'dragenter'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', async e => {
+    e.preventDefault();
+    try {
+      const { paths, sawDir } = await collectDroppedPaths(e);
+      if (!paths.length) {
+        toast(sawDir ? '该文件夹中没有找到 PDF 文件' : '没有找到 PDF 文件（可尝试「选择文件夹」或「选择文件」按钮）', 5000);
+        return;
+      }
+      const unique = [...new Set(paths)].sort();
+      lastDirs = [...new Set(unique.map(p => p.replace(/[\\/][^\\/]+$/, '')))];
+      await runParse(unique);
+    } catch (err) {
+      toast('读取拖入内容失败：' + err.message, 5000);
+    }
+  });
+}
+async function pickAndScan() {
+  const dir = await window.invoiceAPI.pickDir();
+  if (!dir) return;
+  toast(parsingToast(), 8000);
+  try {
+    const res = await window.invoiceAPI.scanDir(dir);
+    lastDirs = [dir];
+    mergeItems(res.items);
+    if (!res.count) toast('该文件夹没有找到 PDF 文件');
+  } catch (e) { toast('扫描失败：' + e.message, 6000); }
+}
+async function pickAndParse() {
+  const paths = await window.invoiceAPI.pickFiles();
+  if (!paths || !paths.length) return;
+  lastDirs = [...new Set(paths.map(p => p.replace(/[\\/][^\\/]+$/, '')))];
+  await runParse(paths);
+}
+async function runParse(paths) {
+  toast(parsingToast(), 8000);
+  try {
+    const res = await window.invoiceAPI.parseFiles(paths);
+    mergeItems(res.items);
+  } catch (e) { toast('解析失败：' + e.message, 6000); }
+}
+// 合并：已存在的文件按路径原位更新，新文件追加（不替换现有列表）
+function mergeItems(newItems) {
+  const bySrc = new Map(items.map(i => [i.src, i]));
+  for (const it of newItems) bySrc.set(it.src, it);
+  items = [...bySrc.values()];
+  renderTable(); renderMeta();
+}
+function renderMeta() {
+  const ok = items.filter(i => i.status === 'ok').length;
+  $('resultMeta').textContent = `共 ${items.length} 个文件，完整识别 ${ok} 个`;
+  $('resultPanel').style.display = items.length ? 'block' : 'none';
+}
+// 默认折叠显示的关键字段（其余字段点击展开）
+const KEY_FIELD_KEYS = ['invoice_no', 'date', 'amount'];
+const expandedRows = new Set(); // 已展开的行（按 src 记忆，刷新后保持）
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function renderTable() {
+  const tb = $('tableBody'); tb.innerHTML = '';
+  // 先显示面板：display:none 时 textarea scrollHeight=0，autoGrow 会算成半行高度
+  $('resultPanel').style.display = items.length ? 'block' : 'none';
+  items.forEach((it, idx) => {
+    const tr = document.createElement('tr');
+    const expanded = expandedRows.has(it.src);
+    const allChips = Object.entries(it.fields).filter(([, v]) => v);
+    const shown = expanded ? allChips : allChips.filter(([k]) => KEY_FIELD_KEYS.includes(k));
+    const fieldChips = shown.map(([k, v]) =>
+      `<span class="fchip"><b>${LABELS[k] || k}</b> ${escapeHtml(v)}</span>`).join('');
+    const more = !expanded && allChips.length > shown.length;
+    const badge = { ok: '✓ 完整', partial: '⚠ 部分', failed: '✕ 失败' }[it.status];
+    tr.innerHTML = `
+      <td><div class="fname">${escapeHtml(it.filename)}</div></td>
+      <td>${fieldChips || '<span class="ferr">未识别到字段</span>'}
+          ${more ? `<button class="expand-btn" onclick="toggleExpand(${idx})">⌄ 展开全部 ${allChips.length} 项</button>` : ''}
+          ${expanded ? `<button class="expand-btn" onclick="toggleExpand(${idx})">⌃ 收起</button>` : ''}
+          ${it.llm_used ? '<span class="fchip">🤖 LLM补全</span>' : ''}
+          ${it.llm_error ? `<div class="ferr">LLM: ${escapeHtml(it.llm_error)}</div>` : ''}
+          ${it.errors.map(e => `<div class="ferr">${escapeHtml(e)}</div>`).join('')}</td>
+      <td><textarea class="new" data-idx="${idx}" rows="1">${escapeHtml(renderTemplateJS(template, it.fields))}</textarea></td>
+      <td><span class="badge ${it.status}">${badge}</span></td>
+      <td><button class="rm-btn" title="移除该文件" onclick="removeRow(${idx})">✕</button></td>`;
+    tb.appendChild(tr);
+  });
+  // textarea 高度自适应（内容折行后完整显示）
+  // 同步先算一次 + rAF 再算一次：显示面板后布局/列宽才最终确定，折行结果才准确
+  tb.querySelectorAll('.new').forEach(autoGrow);
+  requestAnimationFrame(() => tb.querySelectorAll('.new').forEach(autoGrow));
+  renderTotals();
+}
+
+function toggleExpand(idx) {
+  const it = items[idx];
+  if (!it) return;
+  if (expandedRows.has(it.src)) expandedRows.delete(it.src);
+  else expandedRows.add(it.src);
+  renderTable();
+}
+
+// textarea 高度自适应：内容变化时按 scrollHeight 长高（完整显示，不设上限，表格随行增高、主区可滚动）
+function autoGrow(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+
+// 底部合计行：金额/税额/价税合计（只统计识别出对应字段的行）
+function renderTotals() {
+  const foot = $('tableFoot');
+  if (!items.length) { foot.innerHTML = ''; return; }
+  let sumExcl = 0, sumTax = 0, sumTotal = 0, na = 0;
+  for (const it of items) {
+    const excl = parseFloat(it.fields.amount_excl);
+    const tax = parseFloat(it.fields.tax);
+    const total = parseFloat(it.fields.amount);
+    if (!isNaN(excl)) sumExcl += excl; else na++;
+    if (!isNaN(tax)) sumTax += tax;
+    if (!isNaN(total)) sumTotal += total;
+  }
+  const fmt = n => n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  foot.innerHTML = `<tr class="totals">
+    <td><b>合计</b></td>
+    <td colspan="2">
+      <span class="sum">金额合计 <b>¥${fmt(sumExcl)}</b></span>
+      <span class="sum" style="margin-left:16px">税额合计 <b>¥${fmt(sumTax)}</b></span>
+      <span class="sum" style="margin-left:16px">价税合计 <b>¥${fmt(sumTotal)}</b></span>
+      ${na ? `<span class="na">另有 ${na} 张未识别金额</span>` : ''}
+    </td>
+    <td colspan="2"></td>
+  </tr>`;
+}
+function refreshSuggestedNames() {
+  document.querySelectorAll('.new').forEach(inp => {
+    const it = items[+inp.dataset.idx];
+    if (it) { inp.value = renderTemplateJS(template, it.fields); autoGrow(inp); }
+  });
+}
+// 用户手动编辑新文件名时高度自适应（textarea 输入事件委托）
+document.addEventListener('input', e => {
+  if (e.target && e.target.classList && e.target.classList.contains('new')) autoGrow(e.target);
+});
+function removeRow(idx) {
+  items.splice(idx, 1);
+  renderTable(); renderMeta();
+}
+function clearList() {
+  items = [];
+  renderTable(); renderMeta();
+}
+function currentNewNames() {
+  return [...document.querySelectorAll('.new')].map(inp => ({
+    src: items[+inp.dataset.idx].src,
+    // 文件名不允许换行：textarea 折行只是显示，提交时去除换行符
+    new_name: inp.value.replace(/[\r\n]+/g, '').trim(),
+    fields: items[+inp.dataset.idx].fields
+  }));
+}
+async function renameAll() {
+  if (!items.length) return;
+  toast('重命名中…');
+  try {
+    const res = await window.invoiceAPI.rename(currentNewNames());
+    let ok = 0, fails = [];
+    res.results.forEach(r => r.ok ? ok++ : fails.push(r.message));
+    // 原位更新列表（只更新被重命名的行，不重新扫描文件夹）
+    const bySrc = new Map(res.results.map(r => [r.src, r]));
+    for (const it of items) {
+      const r = bySrc.get(it.src);
+      if (r && r.ok && r.new_path) {
+        it.src = r.new_path;
+        it.filename = basename(r.new_path);
+      }
+    }
+    renderTable(); renderMeta();
+    toast(`重命名完成：成功 ${ok} 个` + (fails.length ? `；失败 ${fails.length} 个（${fails[0]}）` : ''), 6000);
+  } catch (e) { toast('重命名失败：' + e.message, 6000); }
+}
+async function reparse() {
+  if (!items.length) return;
+  await runParse(items.map(i => i.src));
+  toast('解析完成');
+}
+async function undo() {
+  try {
+    const res = await window.invoiceAPI.undo();
+    toast(res.message, 6000);
+    // 撤销后原位还原文件名（只更新匹配的行）
+    if (res.records) {
+      const byNew = new Map(res.records.map(r => [r.new, r.old]));
+      for (const it of items) {
+        if (byNew.has(it.src)) {
+          it.src = byNew.get(it.src);
+          it.filename = basename(it.src);
+        }
+      }
+      renderTable(); renderMeta();
+    }
+  } catch (e) { toast('撤销失败：' + e.message, 6000); }
+}
+function basename(p) {
+  const parts = String(p).split(/[\\/]/);
+  return parts[parts.length - 1];
+}
+
+/* ---------- 初始化 ---------- */
+(async function init() {
+  const sel = $('fieldSel');
+  sel.innerHTML = Object.entries(LABELS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
+  setupDrop();
+  await loadConfig();
+  // 自绘标题栏：窗口控制按钮
+  const wc = window.invoiceAPI.windowControls;
+  $('tbMin').onclick = () => wc.minimize();
+  $('tbMax').onclick = () => wc.maximizeToggle();
+  $('tbClose').onclick = () => wc.close();
+  wc.onMaximizedChange(v => {
+    document.body.classList.toggle('maximized', v);
+    $('tbMax').title = v ? '还原' : '最大化';
+  });
+})();
+</script>
+</body>
+</html>

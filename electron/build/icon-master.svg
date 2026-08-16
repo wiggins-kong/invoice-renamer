@@ -1,0 +1,36 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- 发票识别重命名 · 程序图标（用户选定方向 B：发票 + 命名标签）
+       视觉世界：明亮现代工作台，白+蓝，Notion/Linear 气质，克制几何，单强调色 #2563EB -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3E7BFA"/>
+      <stop offset="1" stop-color="#1D4ED8"/>
+    </linearGradient>
+    <filter id="paperShadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="18" stdDeviation="26" flood-color="#0B2A85" flood-opacity="0.40"/>
+    </filter>
+    <filter id="labelShadow" x="-30%" y="-60%" width="160%" height="220%">
+      <feDropShadow dx="0" dy="10" stdDeviation="18" flood-color="#0B2A85" flood-opacity="0.30"/>
+    </filter>
+  </defs>
+
+  <!-- 底：圆角方块，135° 渐变与界面强调色一致 -->
+  <rect x="0" y="0" width="1024" height="1024" rx="232" fill="url(#bg)"/>
+
+  <!-- 发票纸张（白色，柔和投影浮起） -->
+  <g filter="url(#paperShadow)">
+    <rect x="292" y="272" width="440" height="488" rx="44" fill="#ffffff"/>
+  </g>
+
+  <!-- 命名标签条：蓝色，从纸左缘探出，内嵌两行白色文件名 -->
+  <g filter="url(#labelShadow)">
+    <rect x="248" y="384" width="528" height="104" rx="30" fill="#2563EB"/>
+    <rect x="330" y="420" width="188" height="18" rx="9" fill="#FFFFFF" fill-opacity="0.92"/>
+    <rect x="330" y="456" width="252" height="18" rx="9" fill="#FFFFFF" fill-opacity="0.92"/>
+  </g>
+
+  <!-- 纸上内容行（发票文本节奏：长短-中-长） -->
+  <rect x="368" y="560" width="280" height="24" rx="12" fill="#D6DFF1"/>
+  <rect x="368" y="622" width="216" height="24" rx="12" fill="#D6DFF1"/>
+  <rect x="368" y="684" width="252" height="24" rx="12" fill="#D6DFF1"/>
+</svg>

@@ -1,0 +1,24 @@
+# 虚拟环境与 Python 缓存
+venv/
+__pycache__/
+*.pyc
+
+# Web 版 PyInstaller 打包产物（根目录）
+/build/
+/dist/
+
+# Electron 打包产物与依赖
+electron/node_modules/
+electron/dist/
+
+# 敏感数据（API key 加密密文、撤销日志）
+config.yaml
+undo_log.json
+uploads/
+
+# 开发临时脚本
+electron/verify-*.js
+
+# 系统文件
+Thumbs.db
+.DS_Store
