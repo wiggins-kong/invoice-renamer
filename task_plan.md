@@ -51,12 +51,13 @@
 - [x] 交付：electron/dist/发票识别重命名.exe（83MB）+ 使用说明.txt
 - **状态：** complete
 
-### 阶段 13（v2.4：设置弹窗——LLM 配置移入二级设置界面）
-- [x] 左栏移除 LLM 四字段（提供商/Base URL/模型/API Key），改「⚙ 设置…」入口按钮（仅非纯正则模式显示）
-- [x] 新增全局设置弹窗（模态）：标题「设置」，可扩展分区结构（首个区块「LLM 服务」），后续设置项按区块追加
-- [x] 交互：打开时快照、取消原样恢复、保存写配置；Esc / 点遮罩关闭；provider 切换 key 按提供商隔离
+### 阶段 13（v2.4：全局设置弹窗——LLM 配置移入二级设置界面）
+- [x] 左栏移除 LLM 四字段（提供商/Base URL/模型/API Key）
+- [x] 全局设置入口：**界面左下角固定 ⚙ 齿轮图标**（fixed 定位），任何提取模式下都可见；hover 高亮 + tooltip
+- [x] 新增模态设置弹窗：标题「设置」，可扩展分区结构（`.modal-sec-title`，首个区块「LLM 服务」），后续设置项按区块追加
+- [x] 交互：打开时快照、取消/遮罩/Esc 原样恢复、保存写配置；provider 切换 key 按提供商隔离
 - [x] 配置结构（cfg.llm）与 IPC 不变，仅前端改造；README 使用流程更新
-- [x] 验证：交互验证脚本 scripts/verify-settings.js 17/17 通过 + 截图检查；extractor 回归 5/5；--smoke ALL_OK
+- [x] 验证：交互验证脚本 scripts/verify-settings.js 17/17 通过 + 截图检查（齿轮图标/弹窗/遮罩层级）；extractor 回归 5/5；--smoke ALL_OK；重新打包 exe 实测通过
 - **状态：** complete
 
 ## 关键问题

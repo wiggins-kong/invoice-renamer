@@ -1,22 +1,23 @@
 # 进度日志
 
-## 会话：2026-08-16（v2.4：设置弹窗）
+## 会话：2026-08-16（v2.4：全局设置弹窗）
 
 ### 阶段 13（LLM 配置移入二级设置界面）
 - **状态：** complete
 - 执行的操作：
-  1. 左栏「解析与重命名设置」卡片移除 LLM 四字段（提供商/Base URL/模型/API Key），改为全宽「⚙ 设置…」入口按钮（btn-block，仅 hybrid/llm 模式显示，regex 时隐藏）
-  2. 新增全局设置弹窗（模态 overlay + card）：标题「⚙ 设置」，内部用 `.modal-sec-title` 分区结构（首个区块「LLM 服务」）——用户明确要的是全局设置入口，后续设置项按区块追加
-  3. 交互逻辑：openSettings 时快照（provider/keys/model/base），取消/点遮罩/Esc 原样恢复；saveSettings 写 llmKeys + saveConfig；provider 切换时 key 按提供商隔离（沿用原逻辑）；fetchModels 静默刷新模型下拉
-  4. 配置结构 cfg.llm 与 IPC 完全不变，纯前端改造；collectSettings/loadConfig 无需改动（DOM id 未变，只是移了位置）
+  1. 左栏「解析与重命名设置」卡片移除 LLM 四字段（提供商/Base URL/模型/API Key）
+  2. **入口设计两次修正**：初版做成左栏内「⚙ 设置…」文字按钮（regex 模式隐藏）→ 用户纠正：要的是**全局设置入口**，放**界面左下角、纯图标**、任何提取模式下都不隐藏 → 改为 `position:fixed` 左下角齿轮 SVG 图标按钮（`.settings-fab`，hover 高亮 accent + tooltip「设置」），onModeChange 不再干预显隐
+  3. 新增模态设置弹窗（overlay + card）：标题「⚙ 设置」，内部用 `.modal-sec-title` 分区结构（首个区块「LLM 服务」）——用户明确要求保留可扩展设计逻辑，后续设置项按区块追加
+  4. 交互逻辑：openSettings 时快照（provider/keys/model/base），取消/点遮罩/Esc 原样恢复；saveSettings 写 llmKeys + saveConfig；provider 切换时 key 按提供商隔离；fetchModels 静默刷新模型下拉
+  5. 配置结构 cfg.llm 与 IPC 完全不变，纯前端改造；collectSettings/loadConfig 无需改动（DOM id 未变，只是移了位置）
 - 创建/修改的文件：
-  - electron/renderer/index.html（入口按钮 + 弹窗 HTML/CSS + openSettings/closeSettings/saveSettings + onModeChange 适配）
+  - electron/renderer/index.html（左下角齿轮按钮 + 弹窗 HTML/CSS + openSettings/closeSettings/saveSettings）
   - electron/scripts/verify-settings.js（新增：stub IPC + 真实 renderer/preload 的交互验证）
   - README.md（使用流程第 1 条更新）
 - 验证：
-  - scripts/verify-settings.js 17/17 通过（打开/切提供商/取消恢复/保存载荷/Esc/regex 隐藏）
-  - 截图检查：弹窗标题、分区、四字段、遮罩层次正常，无布局问题（注意：隐藏窗口 + backdrop-filter 会导致截图缺弹窗，需 win.show() + 禁用 backdrop-filter）
-  - extractor 回归 5/5；--smoke ALL_OK
+  - scripts/verify-settings.js 17/17 通过（打开/切提供商/取消恢复/保存载荷/Esc/regex 下入口仍可见/fixed 定位断言）
+  - 截图检查：左下角齿轮图标、弹窗标题/分区/四字段、遮罩压暗层级正常，无布局问题
+  - extractor 回归 5/5；--smoke ALL_OK；重新打包 exe 打包版冒烟 RESULT=ALL_OK
 - 遇到的问题：
   - 验证脚本 save 断言在页面里读不到主进程 lastSaved → 拆两段 executeJavaScript，主进程断言
   - 隐藏窗口截图缺弹窗：backdrop-filter 合成层在不可见窗口不渲染 → win.show() + 注入样式禁用 backdrop-filter/animation

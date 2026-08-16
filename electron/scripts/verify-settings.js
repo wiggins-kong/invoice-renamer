@@ -61,8 +61,8 @@ app.whenReady().then(async () => {
       const out = [];
       const R1 = (name, ok) => out.push({ name, ok });
 
-      const entry = $('settingsEntryBtn');
-      R1('entry-visible', !!entry && entry.style.display !== 'none');
+      const entry = $('settingsBtn');
+      R1('entry-visible', !!entry && entry.style.display !== 'none' && getComputedStyle(entry).position === 'fixed');
 
       openSettings();
       await tick(50);
@@ -119,7 +119,7 @@ app.whenReady().then(async () => {
       $('mode').value = 'regex';
       onModeChange();
       await tick(20);
-      out.push({ name: 'regex-hides-entry', ok: $('settingsEntryBtn').style.display === 'none' });
+      out.push({ name: 'regex-keeps-entry', ok: $('settingsBtn').style.display !== 'none' });
 
       $('mode').value = 'hybrid';
       onModeChange();
