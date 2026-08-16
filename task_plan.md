@@ -4,7 +4,7 @@
 做一个本地运行的「后端服务 + 网页前端」工具：识别 PDF 发票内容（发票号码、日期、销售方、金额等），按可视化拼接的命名模板批量重命名，支持 LLM 可选兜底；**打包为单文件 exe，任意 Windows 免安装运行**。
 
 ## 当前阶段
-阶段 6（v1.1 修复与打包）→ complete
+阶段 13（设置弹窗）→ complete
 
 ## 各阶段
 
@@ -49,6 +49,14 @@
 - [x] electron-builder 打包 portable exe + 打包版 --smoke 实测（RESULT=ALL_OK）
 - [x] 数据目录改用 %APPDATA%\invoice-renamer（portable exe 自解压到临时目录，不能用 exe 旁）
 - [x] 交付：electron/dist/发票识别重命名.exe（83MB）+ 使用说明.txt
+- **状态：** complete
+
+### 阶段 13（v2.4：设置弹窗——LLM 配置移入二级设置界面）
+- [x] 左栏移除 LLM 四字段（提供商/Base URL/模型/API Key），改「⚙ 设置…」入口按钮（仅非纯正则模式显示）
+- [x] 新增全局设置弹窗（模态）：标题「设置」，可扩展分区结构（首个区块「LLM 服务」），后续设置项按区块追加
+- [x] 交互：打开时快照、取消原样恢复、保存写配置；Esc / 点遮罩关闭；provider 切换 key 按提供商隔离
+- [x] 配置结构（cfg.llm）与 IPC 不变，仅前端改造；README 使用流程更新
+- [x] 验证：交互验证脚本 scripts/verify-settings.js 17/17 通过 + 截图检查；extractor 回归 5/5；--smoke ALL_OK
 - **状态：** complete
 
 ## 关键问题
