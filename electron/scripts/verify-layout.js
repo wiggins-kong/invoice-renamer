@@ -28,8 +28,7 @@ function registerStubs() {
 
 const SIZES = [
   { w: 1180, h: 820, tag: 'default' },
-  { w: 940, h: 620, tag: 'min' },
-  { w: 940, h: 700, tag: 'narrow-short' },
+  { w: 1080, h: 820, tag: 'min-width' },
 ];
 
 app.whenReady().then(async () => {
@@ -63,7 +62,7 @@ app.whenReady().then(async () => {
         const rc = document.querySelector('.row-ctl').getBoundingClientRect();
         const sg = document.querySelector('.sep-group').getBoundingClientRect();
         const fs = $('fieldSel').getBoundingClientRect();
-        const pr = document.querySelector('.preset-row').getBoundingClientRect();
+        const pr = document.querySelector('.preset-inline').getBoundingClientRect();
         const ch = document.querySelector('.card-head').getBoundingClientRect();
         const drop = $('drop').getBoundingClientRect();
         const main = document.querySelector('.main');

@@ -143,8 +143,8 @@
   .sep-grp { margin-right: 2px; }
   /* 分隔符组：整组不拆散，窄窗时整组换行 */
   .sep-group { display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0; white-space: nowrap; }
-  /* 预设：卡片标题行右侧，不参与换行 */
-  .preset-row { margin-left: auto; display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  /* 预设：行内靠右 */
+  .preset-inline { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; white-space: nowrap; }
 
   /* ============ 按钮 ============ */
   .btn {
@@ -445,16 +445,6 @@
       <div class="card-head">
         <h2>命名模板</h2>
         <span class="muted" style="margin-left:0">按住拖拽排序</span>
-        <div class="preset-row">
-          <label class="f" style="margin:0">预设</label>
-          <select id="preset" onchange="applyPreset()" style="width:auto">
-            <option value="default">日期_号码_销售方_金额</option>
-            <option value="dni">日期_号码_金额</option>
-            <option value="nis">号码_销售方_金额</option>
-            <option value="sda">销售方_日期_金额</option>
-            <option value="dtna">日期_票种_号码_金额</option>
-          </select>
-        </div>
       </div>
 
       <div class="row-ctl nowrap">
@@ -468,6 +458,17 @@
           <button class="btn btn-ghost" onclick="addSep('.')">.</button>
           <input type="text" id="customSep" style="width:58px" placeholder="其他">
           <button class="btn btn-ghost" onclick="addCustomSep()">添加</button>
+        </span>
+        <span class="spacer"></span>
+        <span class="preset-inline">
+          <label class="f" style="margin:0">预设</label>
+          <select id="preset" onchange="applyPreset()" style="width:auto">
+            <option value="default">日期_号码_销售方_金额</option>
+            <option value="dni">日期_号码_金额</option>
+            <option value="nis">号码_销售方_金额</option>
+            <option value="sda">销售方_日期_金额</option>
+            <option value="dtna">日期_票种_号码_金额</option>
+          </select>
         </span>
       </div>
 

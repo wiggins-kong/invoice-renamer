@@ -137,7 +137,7 @@ function createWindow() {
   const win = new BrowserWindow({
     width: 1180,
     height: 820,
-    minWidth: 940,
+    minWidth: 1080,
     minHeight: 620,
     title: '发票识别重命名',
     icon: path.join(__dirname, 'build', 'icon.ico'),
