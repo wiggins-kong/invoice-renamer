@@ -227,6 +227,34 @@
   .drop .muted { font-size: 12px; }
   .pick-row { display: flex; gap: 10px; margin-top: 11px; }
 
+  /* ============ 识别进度条 ============ */
+  .parse-progress {
+    margin-top: 12px; padding: 9px 12px;
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 10px; transition: opacity .2s;
+  }
+  .pp-top { display: flex; align-items: baseline; gap: 8px; margin-bottom: 7px; }
+  .pp-text {
+    flex: 1; min-width: 0; font-size: 12.5px; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .pp-text .pp-stage {
+    display: inline-block; margin-right: 6px; padding: 1px 7px;
+    font-size: 11px; font-weight: 600; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent);
+    vertical-align: 1px;
+  }
+  .pp-text .pp-stage.llm { background: #fef3c7; color: #b45309; }
+  [data-theme="dark"] .pp-text .pp-stage.llm { background: rgba(180, 83, 9, .22); color: #fbbf24; }
+  .pp-count { font-size: 12px; color: var(--text-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .pp-track { height: 6px; border-radius: 999px; background: var(--border); overflow: hidden; }
+  .pp-bar {
+    height: 100%; width: 0%; border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent), #60a5fa);
+    transition: width .22s ease;
+  }
+  .pp-bar.done { background: #22c55e; }
+
   /* ============ 表格 ============ */
   .tbl-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); }
   table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
@@ -498,6 +526,14 @@
         <button class="btn btn-lg" onclick="pickAndScan()">📁 选择文件夹…</button>
         <button class="btn btn-soft btn-lg" onclick="pickAndParse()">📄 选择文件…</button>
       </div>
+      <!-- 识别进度条（混合/LLM 模式下逐文件显示当前处理进度） -->
+      <div class="parse-progress" id="parseProgress" style="display:none">
+        <div class="pp-top">
+          <span class="pp-text" id="ppText">正在识别…</span>
+          <span class="pp-count" id="ppCount"></span>
+        </div>
+        <div class="pp-track"><div class="pp-bar" id="ppBar"></div></div>
+      </div>
     </section>
 
     <!-- 识别结果 -->
@@ -746,7 +782,49 @@ function parsingToast() {
     regex: '解析中…（仅本地正则，不调用 LLM）',
     hybrid: '解析中…（hybrid 模式，缺字段才调 LLM，请稍候）',
     llm: '解析中…（LLM 模式，请稍候）'
-  }[$('mode').value];
+  }[$('mode').value] || '解析中…';
+}
+/* ---------- 识别进度条：主进程逐文件推送 { phase, done, total, filename } ---------- */
+let progressTimer = null;
+function showProgress() {
+  clearTimeout(progressTimer); // 清掉上一批的延迟隐藏，防止误藏新进度
+  const box = $('parseProgress');
+  box.style.display = 'block';
+  $('ppBar').classList.remove('done');
+  $('ppBar').style.width = '0%';
+  $('ppText').innerHTML = '<span class="pp-stage">准备中</span> 等待主进程…';
+  $('ppCount').textContent = '';
+}
+function updateProgress(p) {
+  const box = $('parseProgress');
+  if (box.style.display !== 'block') showProgress();
+  const stageTxt = p.phase === 'llm' ? '<span class="pp-stage llm">🤖 LLM 补全</span>'
+    : '<span class="pp-stage">本地解析</span>';
+  $('ppText').innerHTML = `${stageTxt} <span title="${escapeHtml(p.filename || '')}">${escapeHtml(p.filename || '')}</span>`;
+  $('ppCount').textContent = `${Math.min(p.done + 1, p.total)} / ${p.total}`;
+  const pct = p.total ? Math.round(((p.done + 1) / p.total) * 100) : 0;
+  $('ppBar').style.width = Math.max(4, Math.min(100, pct)) + '%';
+}
+function finishParseProgress(count) {
+  clearTimeout(progressTimer);
+  const box = $('parseProgress');
+  if (!box || box.style.display !== 'block') return;
+  const pct = $('ppBar').style.width;
+  if (pct && pct !== '0%') { // 至少推进过 → 短暂显示「完成」再收起
+    $('ppBar').classList.add('done');
+    $('ppBar').style.width = '100%';
+    $('ppText').textContent = count != null && count > 0
+      ? `✓ 识别完成，共 ${count} 个文件` : '✓ 识别完成';
+    $('ppCount').textContent = '';
+    progressTimer = setTimeout(() => { box.style.display = 'none'; }, 1600);
+  } else {
+    box.style.display = 'none';
+  }
+}
+function hideParseProgress() {
+  clearTimeout(progressTimer);
+  const box = $('parseProgress');
+  if (box) box.style.display = 'none';
 }
 function collectSettings() {
   const p = $('llmProvider').value;
@@ -1047,13 +1125,17 @@ function setupDrop() {
 async function pickAndScan() {
   const dir = await window.invoiceAPI.pickDir();
   if (!dir) return;
-  toast(parsingToast(), 8000);
+  showProgress();
   try {
     const res = await window.invoiceAPI.scanDir(dir);
     lastDirs = [dir];
     mergeItems(res.items);
+    finishParseProgress(res.items.length);
     if (!res.count) toast('该文件夹没有找到 PDF 文件');
-  } catch (e) { toast('扫描失败：' + e.message, 6000); }
+  } catch (e) {
+    hideParseProgress();
+    toast('扫描失败：' + e.message, 6000);
+  }
 }
 async function pickAndParse() {
   const paths = await window.invoiceAPI.pickFiles();
@@ -1062,11 +1144,15 @@ async function pickAndParse() {
   await runParse(paths);
 }
 async function runParse(paths) {
-  toast(parsingToast(), 8000);
+  showProgress();
   try {
     const res = await window.invoiceAPI.parseFiles(paths);
     mergeItems(res.items);
-  } catch (e) { toast('解析失败：' + e.message, 6000); }
+    finishParseProgress(res.items.length);
+  } catch (e) {
+    hideParseProgress();
+    toast('解析失败：' + e.message, 6000);
+  }
 }
 // 合并：已存在的文件按路径原位更新，新文件追加（不替换现有列表）
 function mergeItems(newItems) {
@@ -1209,7 +1295,6 @@ async function renameAll() {
 async function reparse() {
   if (!items.length) return;
   await runParse(items.map(i => i.src));
-  toast('解析完成');
 }
 async function undo() {
   try {
@@ -1238,6 +1323,10 @@ function basename(p) {
   const sel = $('fieldSel');
   sel.innerHTML = Object.entries(LABELS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
   setupDrop();
+  // 识别进度订阅：主进程逐文件推送（混合/LLM 模式耗时明显）
+  window.invoiceAPI.onParseProgress(p => {
+    if (p && typeof p.done === 'number') updateProgress(p);
+  });
   await loadConfig();
   // 自绘标题栏：窗口控制按钮
   const wc = window.invoiceAPI.windowControls;

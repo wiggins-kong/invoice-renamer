@@ -1,5 +1,27 @@
 # 进度日志
 
+## 会话：2026-08-18（v2.7：识别进度条——混合/LLM 模式逐文件进度反馈）
+
+### 阶段 16（识别进度交互）
+- **状态：** complete
+- 用户反馈：混合识别/LLM 模式下没有明确的识别进度交互——`parseItems` 整批处理完才返回，LLM 模式每个文件可能等几十秒，界面只有 8 秒静态 toast，用户干等不知道进行到哪
+- 执行的操作：
+  1. **主进程 `parseItems(paths, cfg, onProgress)`**：循环内逐文件推送 `{ phase, done, total, filename }` 进度事件——每个文件开始解析时 `phase:'regex'`，触发 LLM 补全时 `phase:'llm'`
+  2. **IPC 推送**：`progressSender(event)` 工具函数——`scan:dir`/`parse:files` handler 经 `event.sender.send('parse:progress', p)` 推送，窗口销毁后自动停止
+  3. **preload** 暴露 `onParseProgress(cb)` 订阅
+  4. **renderer 进度条 UI**：`#parseProgress`（发票文件卡片内、选择按钮下方）——圆角进度条（accent 渐变，完成变绿）+ 顶部一行：阶段徽标（本地解析蓝 / 🤖 LLM 补全黄）+ 当前文件名（超长省略）+ 计数 `N / 总数`（等宽数字）
+  5. **交互逻辑**：`runParse`/`pickAndScan` 开头 `showProgress()` 立即显示「准备中」；事件驱动更新；完成后短暂显示「✓ 识别完成，共 N 个文件」1.6s 自动收起（绿色满条）；失败 `hideParseProgress`；新一批开始时清旧定时器防误藏
+  6. 删除原 8 秒静态 toast（`parsingToast` 保留为兜底但不再使用）；`reparse` 多余 toast 移除
+- 创建/修改的文件：
+  - electron/main.js（parseItems + progressSender + handler）、preload.js（onParseProgress）、renderer/index.html（进度条 HTML/CSS/JS）
+  - electron/scripts/verify-progress.js（新：stub IPC 模拟主进程逐文件推送 + 真实 renderer 的交互验证）
+- 验证：
+  - verify-progress.js 20/20：初始隐藏/解析中可见/进度推进/计数 1-2-3/阶段标签切换（regex→LLM→regex）/文件名显示/LLM 徽标/完成态（满条+绿色+文案含数量）/1.8s 自动收起；截图确认进度条在按钮下方、布局无重叠
+  - extractor 回归 5/5；--smoke ALL_OK
+- 遇到的问题：
+  - 首次断言时序算错（IPC 事件到达比 stub 延时快）→ 把断言点对齐事件时间线：stub 间隔拉宽 120ms，t≈90/190/310/450 四点断言
+  - verify 日志有 `llm:list-models No handler` 告警 → stub 补 handler；截图原想页面内拍但合成层不完整 → 改主进程 capturePage 补拍
+
 ## 会话：2026-08-17（v2.6.1：＋字段按钮竖排修复）
 
 ### 阶段 15 二次修正（按钮不收缩 + 整行装得下）

@@ -32,6 +32,7 @@
 | PyInstaller --onefile（Web 版 exe） | Web 版交付；数据目录=exe 旁 |
 | 模板内部表示：有序段列表 | 前端拼接器直接生成 |
 | 撤销 = rename 映射 JSON | 批量操作可一键回滚 |
+| **识别进度事件流（v2.7）** | parseItems 逐文件经 `event.sender.send('parse:progress', {phase,done,total,filename})` 推送，渲染层订阅显示进度条；phase 区分本地解析/LLM 补全——LLM 模式每文件可等几十秒，静态 toast 无反馈 |
 
 ## 遇到的问题
 | 问题 | 解决方案 |

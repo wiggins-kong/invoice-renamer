@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('invoiceAPI', {
   pickFiles: () => ipcRenderer.invoke('pick:files'),
   scanDir: (dir) => ipcRenderer.invoke('scan:dir', dir),
   parseFiles: (paths) => ipcRenderer.invoke('parse:files', paths),
+  onParseProgress: (cb) => ipcRenderer.on('parse:progress', (_e, p) => cb(p)),
   rename: (items) => ipcRenderer.invoke('rename', items),
   undo: () => ipcRenderer.invoke('undo'),
   listModels: (opts) => ipcRenderer.invoke('llm:list-models', opts),

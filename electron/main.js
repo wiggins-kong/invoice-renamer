@@ -75,17 +75,21 @@ function migrateLegacyKey() {
   }
 }
 
-async function parseItems(paths, cfg) {
+async function parseItems(paths, cfg, onProgress) {
   const mode = (cfg.extraction && cfg.extraction.mode) || 'hybrid';
   const llmCfg = llmConfigWithPlainKeys(); // 明文 key 只在主进程内存
   const items = [];
-  for (const p of paths) {
+  const total = paths.length;
+  for (let i = 0; i < total; i++) {
+    const p = paths[i];
+    if (onProgress) onProgress({ phase: 'regex', done: i, total, filename: path.basename(p) });
     const res = await parsePdf(p);
     const fields = res.fields;
     let errors = res.errors.slice();
     let llm_used = false;
     let llm_error = null;
     if (mode === 'llm' || (mode === 'hybrid' && LLM_TRIGGER_FIELDS.some(k => !fields[k]))) {
+      if (onProgress) onProgress({ phase: 'llm', done: i, total, filename: path.basename(p) });
       try {
         const llmFields = await llm.extractWithLlm(res.rawText || '', llmCfg);
         Object.assign(fields, mode === 'llm' ? llm.replaceAll(fields, llmFields) : llm.fillMissing(fields, llmFields));
@@ -197,16 +201,24 @@ function registerIpc() {
     return r.canceled ? null : r.filePaths;
   });
 
-  ipcMain.handle('scan:dir', async (_e, dir) => {
+  // 进度事件推送（不阻塞解析；窗口销毁后停止发送）
+  const progressSender = (event) => {
+    const wc = event.sender;
+    return (p) => {
+      try { if (!wc.isDestroyed()) wc.send('parse:progress', p); } catch (e) { /* ignore */ }
+    };
+  };
+
+  ipcMain.handle('scan:dir', async (event, dir) => {
     const cfg = configLib.loadConfig();
     const pdfs = [];
     collectPdfs(dir, pdfs);
-    return { items: await parseItems(pdfs, cfg), count: pdfs.length, dir };
+    return { items: await parseItems(pdfs, cfg, progressSender(event)), count: pdfs.length, dir };
   });
 
-  ipcMain.handle('parse:files', async (_e, paths) => {
+  ipcMain.handle('parse:files', async (event, paths) => {
     const cfg = configLib.loadConfig();
-    return { items: await parseItems(paths || [], cfg) };
+    return { items: await parseItems(paths || [], cfg, progressSender(event)) };
   });
 
   ipcMain.handle('rename', (_e, items) => {

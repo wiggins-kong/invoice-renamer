@@ -4,9 +4,17 @@
 做一个本地运行的「后端服务 + 网页前端」工具：识别 PDF 发票内容（发票号码、日期、销售方、金额等），按可视化拼接的命名模板批量重命名，支持 LLM 可选兜底；**打包为单文件 exe，任意 Windows 免安装运行**。
 
 ## 当前阶段
-阶段 15（响应式布局）→ complete
+阶段 16（识别进度交互）→ complete
 
 ## 各阶段
+
+### 阶段 16（v2.7：识别进度条——混合/LLM 模式逐文件进度反馈）
+- [x] 主进程 parseItems 逐文件推送进度事件（phase=regex/llm + done/total/filename），scan:dir / parse:files 经 event.sender 转发（窗口销毁自动停止）
+- [x] preload 暴露 onParseProgress 订阅
+- [x] renderer 进度条 UI（发票文件卡片内）：阶段徽标（本地解析蓝 / 🤖 LLM 补全黄）+ 文件名 + N/总数 + 渐变进度条；完成绿色满条 1.6s 自动收起；失败隐藏；新批次清旧定时器
+- [x] 移除 8 秒静态解析 toast（parsingToast 保留兜底）；reparse 冗余 toast 删除
+- [x] 验证：verify-progress.js 20/20（含阶段切换/计数/完成态/自动收起）+ 截图布局确认；extractor 回归 5/5；--smoke ALL_OK
+- **状态：** complete
 
 ### 阶段 1：需求与发现
 - [x] 理解用户意图：PDF 发票识别 + 重命名
