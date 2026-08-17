@@ -64,9 +64,11 @@ app.whenReady().then(async () => {
         const fs = $('fieldSel').getBoundingClientRect();
         const pr = document.querySelector('.preset-inline').getBoundingClientRect();
         const ch = document.querySelector('.card-head').getBoundingClientRect();
+        const addBtn = document.querySelector('.row-ctl > .btn').getBoundingClientRect();
         const drop = $('drop').getBoundingClientRect();
         const main = document.querySelector('.main');
         const mainR = main.getBoundingClientRect();
+        const rowCtl = document.querySelector('.row-ctl');
         const dropFullyVisible = drop.top >= mainR.top - 1 && drop.bottom <= mainR.bottom + 1;
         return {
           rowCtlH: Math.round(rc.height),
@@ -75,6 +77,8 @@ app.whenReady().then(async () => {
           presetSameLineAsTitle: Math.abs(pr.top - ch.top) < 12,
           presetRightOf: pr.left > ch.left + 200,
           fieldSelW: Math.round(fs.width),
+          addBtnOneLine: Math.round(addBtn.height) < 40, // 按钮被压扁竖排时高度 >40
+          rowOverflow: rowCtl.scrollWidth > rowCtl.clientWidth + 1,
           dropFullyVisible,
           dropTop: Math.round(drop.top), dropBottom: Math.round(drop.bottom),
           mainBottom: Math.round(mainR.bottom), mainScrollH: main.scrollHeight, mainClientH: main.clientHeight,

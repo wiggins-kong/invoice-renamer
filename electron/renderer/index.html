@@ -137,21 +137,23 @@
   input:focus, select:focus { border-color: var(--accent); box-shadow: var(--focus); background: var(--surface); }
   select { cursor: pointer; }
   .row-ctl { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-bottom: 9px; }
-  /* 命名模板控件行：不换行，窄窗时由字段下拉收缩吸收空间，分隔符组永不换行 */
+  /* 命名模板控件行：不换行，窄窗时由字段下拉收缩吸收空间，其余元素永不收缩/换行 */
   .row-ctl.nowrap { flex-wrap: nowrap; }
+  .row-ctl.nowrap > .btn { flex-shrink: 0; white-space: nowrap; }
   .row-ctl input[type=text] { width: auto; }
   .sep-grp { margin-right: 2px; }
   /* 分隔符组：整组不拆散，窄窗时整组换行 */
-  .sep-group { display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0; white-space: nowrap; }
+  .sep-group { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; white-space: nowrap; }
   /* 预设：行内靠右 */
-  .preset-inline { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; white-space: nowrap; }
+  .preset-inline { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; white-space: nowrap; }
 
   /* ============ 按钮 ============ */
   .btn {
     display: inline-flex; align-items: center; gap: 5px; justify-content: center;
     background: var(--accent); color: var(--on-accent); border: 1px solid transparent;
     border-radius: var(--radius-sm); padding: 7px 13px; font-size: 13px; font-weight: 550;
-    cursor: pointer; transition: background .15s, border-color .15s, box-shadow .15s, color .15s, transform .05s;
+    cursor: pointer; white-space: nowrap;
+    transition: background .15s, border-color .15s, box-shadow .15s, color .15s, transform .05s;
   }
   .btn:hover { background: var(--accent-hover); }
   .btn:active { transform: translateY(1px); }
@@ -448,7 +450,7 @@
       </div>
 
       <div class="row-ctl nowrap">
-        <select id="fieldSel" style="flex:0 1 180px; min-width:110px; width:180px"></select>
+        <select id="fieldSel" style="flex:0 1 180px; min-width:100px; width:180px"></select>
         <button class="btn btn-soft" onclick="addField()">＋ 字段</button>
         <span class="sep-group">
           <span class="sep-grp muted">分隔符</span>
@@ -456,13 +458,13 @@
           <button class="btn btn-ghost" onclick="addSep('-')">-</button>
           <button class="btn btn-ghost" onclick="addSep(' ')">␣</button>
           <button class="btn btn-ghost" onclick="addSep('.')">.</button>
-          <input type="text" id="customSep" style="width:58px" placeholder="其他">
+          <input type="text" id="customSep" style="width:48px" placeholder="其他">
           <button class="btn btn-ghost" onclick="addCustomSep()">添加</button>
         </span>
         <span class="spacer"></span>
         <span class="preset-inline">
           <label class="f" style="margin:0">预设</label>
-          <select id="preset" onchange="applyPreset()" style="width:auto">
+          <select id="preset" onchange="applyPreset()" style="width:145px">
             <option value="default">日期_号码_销售方_金额</option>
             <option value="dni">日期_号码_金额</option>
             <option value="nis">号码_销售方_金额</option>

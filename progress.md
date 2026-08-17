@@ -1,17 +1,18 @@
 # 进度日志
 
-## 会话：2026-08-17（v2.6 布局修正：预设回控件行）
+## 会话：2026-08-17（v2.6.1：＋字段按钮竖排修复）
 
-### 阶段 15 修正（预设位置 + 最小宽度）
+### 阶段 15 二次修正（按钮不收缩 + 整行装得下）
 - **状态：** complete
-- 用户反馈：预设放标题行右侧"怪怪的"，要求放回控件行（第二行）后面
+- 用户反馈：截图显示「＋ 字段」按钮加号与文字竖排堆叠（按钮被 flex 压缩导致文字换行）
 - 执行的操作：
-  1. 预设从 `.card-head` 移回 `.row-ctl` 末尾（`.preset-inline`：inline-flex + nowrap + flex-shrink:0），`spacer` 在它前面推至行尾
-  2. **窗口最小宽度 940 → 1080**（main.js）：含预设的整行长度约 734px 内容（容器=宽-300侧栏-16gap-36padding-32卡片内边），1060 起可完整放下；1080 留余量
-  3. 删除 `.preset-row` 相关 CSS/断言，改用 `.preset-inline`
+  1. **按钮永不收缩**：`.btn` 全局加 `white-space: nowrap`；`.row-ctl.nowrap > .btn` 加 `flex-shrink: 0`——空间不足时只由字段下拉收缩吸收，按钮保持单行
+  2. **整行装得下**：字段下拉 min-width 110→100；「其他」输入框 58→48；预设下拉 `width:auto` → 145px 固定（原被「日期_号码_销售方_金额」文案撑到 207px）；sep-group/preset-inline 间距 7/6→5——1080 最小宽度下 scrollWidth==clientWidth（无溢出）
 - 验证：
-  - verify-layout.js 更新尺寸（1180x820 + 1080x820）：两尺寸下控件行（含预设）同一行、fieldSel 收缩正常（1180→155px / 1080→110px min）、无重叠溢出
-  - 截图视觉：默认与最小宽度下预设在行尾、整行整齐
+  - verify-layout.js 新增 `addBtnOneLine`（按钮高度 <40）与 `rowOverflow`（scrollWidth vs clientWidth）断言
+  - 1080：rowCtlH=36 单行、addBtnOneLine=true、rowOverflow=false、fieldSel 收缩到 100-102px
+  - 1180：fieldSel 148px、无溢出
+  - 截图视觉：+字段按钮横排、预设文字完整、无挤压变形
   - extractor 5/5；--smoke ALL_OK；verify-settings 19/19；verify-secret 14/14
 
 ## 会话：2026-08-16（v2.5：API key 加密落盘）
