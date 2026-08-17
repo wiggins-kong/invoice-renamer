@@ -4,7 +4,7 @@
 做一个本地运行的「后端服务 + 网页前端」工具：识别 PDF 发票内容（发票号码、日期、销售方、金额等），按可视化拼接的命名模板批量重命名，支持 LLM 可选兜底；**打包为单文件 exe，任意 Windows 免安装运行**。
 
 ## 当前阶段
-阶段 14（API key 加密落盘）→ complete
+阶段 15（响应式布局）→ complete
 
 ## 各阶段
 
@@ -66,6 +66,14 @@
 - [x] main.js：config:get 脱敏视图（keys→{masked,has}，渲染层永无明文）；config:save 语义（''=保留/新值=加密/__clear__=删除）；llm:list-models 用已保存 key；启动迁移旧 api_key 单字段
 - [x] renderer：keyStates 掩码展示 + placeholder「已保存，留空则保留」+「清除」按钮；keyDraft 草稿暂存（切换 provider 不丢输入）；输入即隐藏清除按钮
 - [x] 验证：verify-secret.js 14/14（磁盘无明文/往返/损坏密文→null/遗留字段清除）；verify-settings.js 19/19（掩码不回填/草稿提交/不提交 keys map）；extractor 5/5；--smoke ALL_OK；真实配置迁移完成（明文→enc:，模板未破坏）
+- **状态：** complete
+
+### 阶段 15（v2.6：响应式布局——窗口缩放不换行不裁切）
+- [x] 横向：命名模板「预设」移到卡片标题行右侧（语义=套用整组模板，永不参与换行）
+- [x] 横向：分隔符组（标签+4按钮+其他输入+添加）包 `.sep-group` nowrap 整组不拆散
+- [x] 横向：命名模板控件行改 `.row-ctl.nowrap` 不换行，字段下拉 `fieldSel` 收缩（180→min 110px）吸收空间
+- [x] 纵向：全局细滚动条（9px 圆角、主题色、悬停加深）；拖拽区紧凑化（图标 44→34、padding 34→20、标题 15→14）；chips/preview 微压缩
+- [x] 验证：verify-layout.js 多尺寸截图（1180x820 / 940x620 / 940x700）——窄宽下分隔符组与字段同行、预设标题行右侧、拖拽区完整可见、无重叠溢出
 - **状态：** complete
 
 ## 关键问题

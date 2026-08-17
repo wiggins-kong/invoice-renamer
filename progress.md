@@ -1,5 +1,25 @@
 # 进度日志
 
+## 会话：2026-08-16（v2.6：响应式布局）
+
+### 阶段 15（窗口缩放不换行不裁切）
+- **状态：** complete
+- 执行的操作：
+  1. **横向**：命名模板「预设」从控件行移到卡片标题行右侧（`.preset-row`，margin-left:auto）——语义归位（套用整组模板≠逐字段拼装），永不参与换行
+  2. **横向**：分隔符组（标签+4按钮+「其他」输入+「添加」）包 `.sep-group`（inline-flex + white-space:nowrap + flex-shrink:0），窄窗整组换行不散
+  3. **横向**：命名模板控件行改 `.row-ctl.nowrap`（flex-wrap:nowrap），字段下拉 fieldSel 改 `flex:0 1 180px; min-width:110px`——窄窗由它收缩吸收空间，分隔符组永不换行
+  4. **纵向**：全局细滚动条（9px 圆角、border-strong 色、悬停 text-3 加深）；拖拽区紧凑（图标 44→34、padding 34→20、标题 15→14、icon 间距 8→5）；chips min-height 48→44、preview 间距微调
+- 创建/修改的文件：
+  - electron/renderer/index.html（HTML 结构 + CSS）
+  - electron/scripts/verify-layout.js（新：多尺寸布局度量 + 截图）
+- 验证：
+  - verify-layout.js 三尺寸（1180x820 / 940x620 / 940x700）：窄宽分隔符组与字段同行（fieldSel 收缩 180→139）、预设标题行右侧、拖拽区完整可见、无重叠溢出
+  - 截图视觉检查：默认尺寸观感无退化，最小尺寸整齐
+  - extractor 5/5；--smoke ALL_OK；verify-settings 19/19
+- 遇到的问题：
+  - fieldSel 初版用 `flex:1 1 150px` → 换行后反而撑满整行（1180 下 369px 过宽、940 下 455px）→ 改 `flex:0 1 180px` 固定基线 + 收缩
+  - flex-wrap 下 fieldSel 不收缩（先 wrap 后 shrink 的顺序）→ 关键改 `.row-ctl.nowrap` 让 fieldSel 真正吸收收缩
+
 ## 会话：2026-08-16（v2.5：API key 加密落盘）
 
 ### 阶段 14（safeStorage/DPAPI 加密，明文只在主进程内存）

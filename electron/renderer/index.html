@@ -137,8 +137,14 @@
   input:focus, select:focus { border-color: var(--accent); box-shadow: var(--focus); background: var(--surface); }
   select { cursor: pointer; }
   .row-ctl { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-bottom: 9px; }
+  /* 命名模板控件行：不换行，窄窗时由字段下拉收缩吸收空间，分隔符组永不换行 */
+  .row-ctl.nowrap { flex-wrap: nowrap; }
   .row-ctl input[type=text] { width: auto; }
   .sep-grp { margin-right: 2px; }
+  /* 分隔符组：整组不拆散，窄窗时整组换行 */
+  .sep-group { display: inline-flex; align-items: center; gap: 7px; flex-shrink: 0; white-space: nowrap; }
+  /* 预设：卡片标题行右侧，不参与换行 */
+  .preset-row { margin-left: auto; display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 
   /* ============ 按钮 ============ */
   .btn {
@@ -163,9 +169,9 @@
 
   /* ============ 模板拼接器 ============ */
   .chips {
-    display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-height: 48px;
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-height: 44px;
     background: var(--surface-2); border: 1.5px dashed var(--border-strong);
-    border-radius: var(--radius-sm); padding: 10px 12px; margin: 2px 0 11px;
+    border-radius: var(--radius-sm); padding: 9px 12px; margin: 2px 0 10px;
     transition: border-color .15s, background .15s;
   }
   .chip {
@@ -209,15 +215,15 @@
   /* ============ 拖拽区 ============ */
   .drop {
     border: 2px dashed var(--border-strong); border-radius: var(--radius);
-    padding: 34px 24px; text-align: center; cursor: pointer;
+    padding: 20px 22px; text-align: center; cursor: pointer;
     transition: border-color .18s, background .18s, transform .1s;
     background: var(--surface-2);
   }
   .drop:hover, .drop.over { border-color: var(--accent); background: var(--accent-soft); }
-  .drop-icon { display: flex; justify-content: center; margin-bottom: 8px; }
-  .drop-title { font-size: 15px; font-weight: 600; margin-bottom: 3px; }
+  .drop-icon { display: flex; justify-content: center; margin-bottom: 5px; }
+  .drop-title { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
   .drop .muted { font-size: 12px; }
-  .pick-row { display: flex; gap: 10px; margin-top: 13px; }
+  .pick-row { display: flex; gap: 10px; margin-top: 11px; }
 
   /* ============ 表格 ============ */
   .tbl-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); }
@@ -343,6 +349,17 @@
   @keyframes overlay-in { from { opacity: 0; } to { opacity: 1; } }
   @keyframes modal-in { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
 
+  /* ============ 细滚动条（精致、主题色、只在需要时出现） ============ */
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-strong); border-radius: 999px;
+    border: 2px solid transparent; background-clip: padding-box;
+    transition: background .15s;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-3); background-clip: padding-box; }
+  ::-webkit-scrollbar-corner { background: transparent; }
+
   @media (max-width: 1080px) { .sidebar { width: 300px; } }
 </style>
 </head>
@@ -425,27 +442,33 @@
 
     <!-- 命名模板 -->
     <section class="card">
-      <div class="card-head"><h2>命名模板</h2><span class="muted">按住拖拽排序</span></div>
+      <div class="card-head">
+        <h2>命名模板</h2>
+        <span class="muted" style="margin-left:0">按住拖拽排序</span>
+        <div class="preset-row">
+          <label class="f" style="margin:0">预设</label>
+          <select id="preset" onchange="applyPreset()" style="width:auto">
+            <option value="default">日期_号码_销售方_金额</option>
+            <option value="dni">日期_号码_金额</option>
+            <option value="nis">号码_销售方_金额</option>
+            <option value="sda">销售方_日期_金额</option>
+            <option value="dtna">日期_票种_号码_金额</option>
+          </select>
+        </div>
+      </div>
 
-      <div class="row-ctl">
-        <select id="fieldSel" style="width:210px; flex:0 1 210px"></select>
+      <div class="row-ctl nowrap">
+        <select id="fieldSel" style="flex:0 1 180px; min-width:110px; width:180px"></select>
         <button class="btn btn-soft" onclick="addField()">＋ 字段</button>
-        <span class="sep-grp muted">分隔符</span>
-        <button class="btn btn-ghost" onclick="addSep('_')">_</button>
-        <button class="btn btn-ghost" onclick="addSep('-')">-</button>
-        <button class="btn btn-ghost" onclick="addSep(' ')">␣</button>
-        <button class="btn btn-ghost" onclick="addSep('.')">.</button>
-        <input type="text" id="customSep" style="width:58px" placeholder="其他">
-        <button class="btn btn-ghost" onclick="addCustomSep()">添加</button>
-        <span class="spacer"></span>
-        <label class="f" style="margin:0">预设</label>
-        <select id="preset" onchange="applyPreset()" style="width:auto">
-          <option value="default">日期_号码_销售方_金额</option>
-          <option value="dni">日期_号码_金额</option>
-          <option value="nis">号码_销售方_金额</option>
-          <option value="sda">销售方_日期_金额</option>
-          <option value="dtna">日期_票种_号码_金额</option>
-        </select>
+        <span class="sep-group">
+          <span class="sep-grp muted">分隔符</span>
+          <button class="btn btn-ghost" onclick="addSep('_')">_</button>
+          <button class="btn btn-ghost" onclick="addSep('-')">-</button>
+          <button class="btn btn-ghost" onclick="addSep(' ')">␣</button>
+          <button class="btn btn-ghost" onclick="addSep('.')">.</button>
+          <input type="text" id="customSep" style="width:58px" placeholder="其他">
+          <button class="btn btn-ghost" onclick="addCustomSep()">添加</button>
+        </span>
       </div>
 
       <div class="chips" id="templateChips"></div>
@@ -458,7 +481,7 @@
       <div class="card-head"><h2>发票文件</h2></div>
       <div class="drop" id="drop">
         <div class="drop-icon" aria-hidden="true">
-          <svg width="44" height="44" viewBox="0 0 48 48" fill="none">
+          <svg width="34" height="34" viewBox="0 0 48 48" fill="none">
             <rect x="12" y="7" width="26" height="34" rx="4.5" fill="#ffffff" stroke="#D8E1F2" stroke-width="1.6"/>
             <rect x="8.5" y="16" width="31" height="7" rx="2.6" fill="#2563EB"/>
             <rect x="16" y="28" width="16" height="3" rx="1.5" fill="#C3CFE8"/>
