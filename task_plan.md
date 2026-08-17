@@ -4,16 +4,18 @@
 做一个本地运行的「后端服务 + 网页前端」工具：识别 PDF 发票内容（发票号码、日期、销售方、金额等），按可视化拼接的命名模板批量重命名，支持 LLM 可选兜底；**打包为单文件 exe，任意 Windows 免安装运行**。
 
 ## 当前阶段
-阶段 16（识别进度交互）→ complete
+阶段 16（识别进度交互 + LLM 用量统计）→ complete
 
 ## 各阶段
 
-### 阶段 16（v2.7：识别进度条——混合/LLM 模式逐文件进度反馈）
+### 阶段 16（v2.7 / v2.7.1：识别进度条 + LLM 用量统计）
 - [x] 主进程 parseItems 逐文件推送进度事件（phase=regex/llm + done/total/filename），scan:dir / parse:files 经 event.sender 转发（窗口销毁自动停止）
 - [x] preload 暴露 onParseProgress 订阅
-- [x] renderer 进度条 UI（发票文件卡片内）：阶段徽标（本地解析蓝 / 🤖 LLM 补全黄）+ 文件名 + N/总数 + 渐变进度条；完成绿色满条 1.6s 自动收起；失败隐藏；新批次清旧定时器
-- [x] 移除 8 秒静态解析 toast（parsingToast 保留兜底）；reparse 冗余 toast 删除
-- [x] 验证：verify-progress.js 20/20（含阶段切换/计数/完成态/自动收起）+ 截图布局确认；extractor 回归 5/5；--smoke ALL_OK
+- [x] renderer 进度条 UI（发票文件卡片内）：阶段徽标（本地解析蓝 / 🤖 LLM 补全黄）+ 文件名 + N/总数 + 渐变进度条；LLM 阶段黄色流动条纹动画
+- [x] **LLM 用量统计**：llm.js 提取 usage（prompt/completion tokens）；parseItems 汇总 summary（llm_calls + 输入/输出/合计 tokens）；每文件 llm_usage
+- [x] **完成态明确告知是否调用 LLM**：`✓ 识别完成：共 N 个文件 · 🤖 调用 LLM M 次 · 消耗 X tokens（I 入 / O 出）`；未调用则 `· 全部本地正则，未调用 LLM`；显示 4.8s 自动收起
+- [x] 结果区 meta 汇总 `共 N 个文件 · 🤖 LLM M 次 · X tokens`；表格行 🤖 LLM补全 徽标附 token 数（hover 看明细）
+- [x] 验证：verify-progress.js 30/30（进度事件流/阶段切换/完成态 LLM 统计/未调用场景/自动收起）+ 截图确认；extractor 回归 5/5；--smoke ALL_OK；打包版 RESULT=ALL_OK
 - **状态：** complete
 
 ### 阶段 1：需求与发现

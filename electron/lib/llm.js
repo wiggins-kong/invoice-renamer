@@ -84,7 +84,14 @@ async function extractWithLlm(text, llmCfg) {
   const data = await resp.json();
   const content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
   if (content === undefined) throw new Error('LLM 响应格式异常');
-  return parseJson(content);
+  // 用量统计（OpenAI 兼容响应标准字段；缺失时归零不影响识别）
+  const u = data.usage || {};
+  const usage = {
+    input: Number(u.prompt_tokens) || 0,
+    output: Number(u.completion_tokens) || 0,
+    total: Number(u.total_tokens) || (Number(u.prompt_tokens) || 0) + (Number(u.completion_tokens) || 0),
+  };
+  return { fields: parseJson(content), usage };
 }
 
 function fillMissing(fields, llmFields) {

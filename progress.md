@@ -1,5 +1,28 @@
 # 进度日志
 
+## 会话：2026-08-18（v2.7.1：LLM 用量统计——明确本次是否调用 LLM + token 消耗）
+
+### 阶段 16 修正（识别进度交互 → 用户真实需求：知道本次调没调 LLM / 花了多少 token）
+- **状态：** complete
+- 用户反馈：光有进度条不够——本地正则很快，进度条一闪而过；混合/LLM 模式同样有进度条但看不出「到底调没调 LLM」。真正要的是：**明确本次识别是否调用了 LLM；调了的话有识别进度；最好显示本次 token 用量**
+- 执行的操作：
+  1. **llm.js**：`extractWithLlm` 响应里提取 OpenAI 兼容 usage（prompt/completion/total_tokens，缺失归零），返回 `{ fields, usage }`（不再裸返回 fields）
+  2. **main.js `parseItems`**：累计批量统计 `summary = { total, llm_calls, tokens: {input, output, total} }`；每文件记录 `llm_usage`；scan:dir / parse:files 返回 `{ items, summary }`
+  3. **renderer `finishParseProgress(count, summary)`**：完成态文案显示——`✓ 识别完成：共 N 个文件 · 🤖 调用 LLM M 次 · 消耗 X tokens（I 入 / O 出）`；未调用时显示 `· 全部本地正则，未调用 LLM`；显示时长 1.6s → 4.8s；`lastSummary` 存入全局
+  4. **renderMeta**：结果区标题旁汇总 `共 N 个文件，完整识别 X 个 · 🤖 LLM M 次 · X tokens` 或 `· 未调用 LLM`
+  5. **表格行徽标**：🤖 LLM补全 徽标附 token 数（hover title 显示 输入/输出/合计明细）
+  6. **LLM 阶段进度条**：黄色渐变 + 流动条纹动画（`.pp-bar.llm`），阶段文案「🤖 LLM 补全中…」——一眼可见当前文件正在等 LLM 返回
+- 创建/修改的文件：electron/lib/llm.js、main.js、renderer/index.html、scripts/verify-progress.js
+- 验证：
+  - verify-progress.js 30/30：新增 summary-llm-calls / summary-tokens / summary-tokens-detail / meta-llm / meta-tokens / row-badge-tokens / shot-prep-msg / no-llm-msg / no-llm-meta / no-llm-bar-not-animated 断言 10 项
+  - 截图确认：绿色满条 + 完成文案含 LLM 次数与 tokens + 结果区汇总 + 行徽标含 token 数 + 布局无重叠
+  - extractor 回归 5/5；--smoke ALL_OK；打包版冒烟 RESULT=ALL_OK（dist 已清理 win-unpacked）
+- 遇到的问题：
+  - `lastSummary` 在 mergeItems（内部调 renderMeta）之后才赋值 → meta 读不到汇总 → 赋值提前到 mergeItems 前
+  - 截图像素停留在解析中旧帧（capturePage 抓旧帧）→ 截图前强制注入完成态文案并等待 350ms 渲染稳定
+  - `--out=C:/...` 参数被 MSYS 路径转换破坏（变成 `=C:\...`）→ 用默认输出路径即可
+  - 残留 electron 进程导致后续验证卡死（4 个 electron.exe 挂起）→ powershell Stop-Process 清理
+
 ## 会话：2026-08-18（v2.7：识别进度条——混合/LLM 模式逐文件进度反馈）
 
 ### 阶段 16（识别进度交互）

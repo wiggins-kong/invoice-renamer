@@ -33,6 +33,7 @@
 | 模板内部表示：有序段列表 | 前端拼接器直接生成 |
 | 撤销 = rename 映射 JSON | 批量操作可一键回滚 |
 | **识别进度事件流（v2.7）** | parseItems 逐文件经 `event.sender.send('parse:progress', {phase,done,total,filename})` 推送，渲染层订阅显示进度条；phase 区分本地解析/LLM 补全——LLM 模式每文件可等几十秒，静态 toast 无反馈 |
+| **LLM 用量统计（v2.7.1）** | 用户真实需求是「本次到底调没调 LLM + 花了多少 token」：llm.js 从响应 usage 取 prompt/completion tokens（缺失归零），parseItems 汇总 summary（llm_calls + 输入/输出/合计），完成态/结果区/行徽标三处展示；LLM 阶段进度条黄色流动条纹动画 |
 
 ## 遇到的问题
 | 问题 | 解决方案 |

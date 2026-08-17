@@ -21,12 +21,6 @@ function registerStubs() {
   ipcMain.handle('llm:list-models', () => ({ models: ['deepseek-chat'] }));
   ipcMain.handle('parse:files', async (event, paths) => {
     const total = paths.length;
-    const mkItem = (i) => ({
-      src: paths[i], filename: path.basename(paths[i]),
-      fields: { invoice_no: '2644' + (1000000000000000 + i), date: '2026年08月1' + i + '日' },
-      suggested: '2026年08月1' + i + '日_2644' + (1000000000000000 + i),
-      status: 'ok', errors: [], llm_used: i === 1, llm_error: null,
-    });
     for (let i = 0; i < total; i++) {
       event.sender.send('parse:progress', { phase: 'regex', done: i, total, filename: path.basename(paths[i]) });
       await new Promise(r => setTimeout(r, 120));
@@ -35,7 +29,17 @@ function registerStubs() {
         await new Promise(r => setTimeout(r, 120));
       }
     }
-    return { items: paths.map((_, i) => mkItem(i)) };
+    const items = paths.map((_, i) => ({
+      src: paths[i], filename: path.basename(paths[i]),
+      fields: { invoice_no: '2644' + (1000000000000000 + i), date: '2026年08月1' + i + '日' },
+      suggested: '2026年08月1' + i + '日_2644' + (1000000000000000 + i),
+      status: 'ok', errors: [], llm_used: i === 1, llm_error: null,
+      llm_usage: i === 1 ? { input: 812, output: 96, total: 908 } : null,
+    }));
+    return {
+      items,
+      summary: { total, llm_calls: 1, tokens: { input: 812, output: 96, total: 908 } },
+    };
   });
   // 空文件列表不报错
   ipcMain.handle('scan:dir', async () => ({ items: [], count: 0, dir: '' }));
@@ -99,23 +103,66 @@ app.whenReady().then(async () => {
       R2('done-count', $('ppText').textContent.includes('3'));
       R2('done-bar-full', parseFloat($('ppBar').style.width) >= 100);
       R2('done-green', $('ppBar').classList.contains('done'));
+      // LLM 汇总：调用次数 + tokens（本次核心需求——明确是否调用 LLM / 花了多少）
+      R2('summary-llm-calls', $('ppText').textContent.includes('调用 LLM 1 次'));
+      R2('summary-tokens', $('ppText').textContent.includes('908 tokens'));
+      R2('summary-tokens-detail', $('ppText').textContent.includes('812 入 / 96 出'));
+      R2('meta-llm', $('resultMeta').textContent.includes('LLM 1 次'));
+      R2('meta-tokens', $('resultMeta').textContent.includes('908'));
+      // 行内徽标带 token 数
+      R2('row-badge-tokens', !!document.querySelector('.fchip[title*="908"]') && document.querySelector('.fchip[title*="908"]').textContent.includes('908t'));
       return out;
     })();
   `);
 
   // 页面里截图由主进程补拍（完整合成层）
   const part2 = await p;
+
+  // 截图前强制置为完成态并等待渲染，确保截图能看到「识别完成 + LLM 汇总」文案
+  const shotPrep = await win.webContents.executeJavaScript(`
+    (async () => {
+      const $ = id => document.getElementById(id);
+      const tick = ms => new Promise(r => setTimeout(r, ms));
+      showProgress();
+      $('ppBar').style.width = '100%';
+      finishParseProgress(3, { total: 3, llm_calls: 1, tokens: { input: 812, output: 96, total: 908 } });
+      await tick(350); // 等完成态文案渲染稳定
+      return $('ppText').textContent;
+    })();
+  `);
   const img = await win.webContents.capturePage();
   fs.writeFileSync(outPng, img.toPNG());
+  results.push({ name: 'shot-prep-msg', ok: shotPrep.includes('识别完成') && shotPrep.includes('908'), extra: shotPrep });
   results.push(...part2);
 
-  // ---- 第三阶段：延迟隐藏（1.8s 后进度条自动收起）----
-  await new Promise(r => setTimeout(r, 1800));
-  const part3 = await win.webContents.executeJavaScript(`(() => {
+  // ---- 第三阶段：未调用 LLM 的批次（纯本地正则）----
+  const part3 = await win.webContents.executeJavaScript(`
+    (async () => {
+      const $ = id => document.getElementById(id);
+      const out = [];
+      const R3 = (name, ok) => out.push({ name, ok });
+      showProgress();
+      $('ppBar').style.width = '100%';
+      finishParseProgress(2, { total: 2, llm_calls: 0, tokens: { input: 0, output: 0, total: 0 } });
+      R3('no-llm-msg', $('ppText').textContent.includes('全部本地正则，未调用 LLM'));
+      lastSummary = { total: 2, llm_calls: 0, tokens: { input: 0, output: 0, total: 0 } };
+      mergeItems([
+        { src: 'C:/a/1.pdf', filename: '1.pdf', fields: { invoice_no: 'A' }, suggested: 'A', status: 'ok', errors: [], llm_used: false, llm_error: null, llm_usage: null },
+      ]);
+      R3('no-llm-meta', $('resultMeta').textContent.includes('未调用 LLM'));
+      R3('no-llm-bar-not-animated', !$('ppBar').classList.contains('llm'));
+      return out;
+    })();
+  `);
+  results.push(...part3);
+
+  // ---- 第四阶段：延迟隐藏（完成提示 5s 后进度条自动收起）----
+  await new Promise(r => setTimeout(r, 5200));
+  const part4 = await win.webContents.executeJavaScript(`(() => {
     const box = document.getElementById('parseProgress');
     return { hidden: box.style.display === 'none' };
   })()`);
-  R('auto-hide-after-done', part3.hidden);
+  R('auto-hide-after-done', part4.hidden);
 
   let failed = 0;
   for (const r of results) {

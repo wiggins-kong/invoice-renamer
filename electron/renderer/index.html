@@ -253,7 +253,13 @@
     background: linear-gradient(90deg, var(--accent), #60a5fa);
     transition: width .22s ease;
   }
-  .pp-bar.done { background: #22c55e; }
+  .pp-bar.llm {
+    background: linear-gradient(90deg, #d97706, #f59e0b);
+    background-size: 200% 100%;
+    animation: pp-stripes 1.1s linear infinite;
+  }
+  @keyframes pp-stripes { from { background-position: 0 0; } to { background-position: 200% 0; } }
+  .pp-bar.done { background: #22c55e; animation: none; }
 
   /* ============ 表格 ============ */
   .tbl-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); }
@@ -624,6 +630,7 @@ const $ = id => document.getElementById(id);
 let template = [];   // [{t:'field'|'sep', v:...}]
 let items = [];      // 当前解析结果
 let lastDirs = [];   // 最近处理的文件夹（用于重命名后刷新）
+let lastSummary = null; // 最近一次批量识别的统计（LLM 调用次数/tokens）
 let themeMode = 'system';
 let modelValue = '';   // 当前模型值（select/input 两种形态间保持）
 let keyStates = {};    // 各提供商 key 状态（主进程脱敏视图：{masked, has}，无明文）
@@ -790,7 +797,7 @@ function showProgress() {
   clearTimeout(progressTimer); // 清掉上一批的延迟隐藏，防止误藏新进度
   const box = $('parseProgress');
   box.style.display = 'block';
-  $('ppBar').classList.remove('done');
+  $('ppBar').classList.remove('done', 'llm');
   $('ppBar').style.width = '0%';
   $('ppText').innerHTML = '<span class="pp-stage">准备中</span> 等待主进程…';
   $('ppCount').textContent = '';
@@ -798,14 +805,16 @@ function showProgress() {
 function updateProgress(p) {
   const box = $('parseProgress');
   if (box.style.display !== 'block') showProgress();
-  const stageTxt = p.phase === 'llm' ? '<span class="pp-stage llm">🤖 LLM 补全</span>'
+  const bar = $('ppBar');
+  const stageTxt = p.phase === 'llm' ? '<span class="pp-stage llm">🤖 LLM 补全中…</span>'
     : '<span class="pp-stage">本地解析</span>';
   $('ppText').innerHTML = `${stageTxt} <span title="${escapeHtml(p.filename || '')}">${escapeHtml(p.filename || '')}</span>`;
   $('ppCount').textContent = `${Math.min(p.done + 1, p.total)} / ${p.total}`;
   const pct = p.total ? Math.round(((p.done + 1) / p.total) * 100) : 0;
-  $('ppBar').style.width = Math.max(4, Math.min(100, pct)) + '%';
+  bar.style.width = Math.max(4, Math.min(100, pct)) + '%';
+  bar.classList.toggle('llm', p.phase === 'llm');
 }
-function finishParseProgress(count) {
+function finishParseProgress(count, summary) {
   clearTimeout(progressTimer);
   const box = $('parseProgress');
   if (!box || box.style.display !== 'block') return;
@@ -813,10 +822,18 @@ function finishParseProgress(count) {
   if (pct && pct !== '0%') { // 至少推进过 → 短暂显示「完成」再收起
     $('ppBar').classList.add('done');
     $('ppBar').style.width = '100%';
-    $('ppText').textContent = count != null && count > 0
-      ? `✓ 识别完成，共 ${count} 个文件` : '✓ 识别完成';
+    const s = summary || {};
+    const t = s.tokens || {};
+    let msg = `✓ 识别完成：共 ${count ?? s.total ?? '?'} 个文件`;
+    if (s.llm_calls > 0) {
+      msg += ` · 🤖 调用 LLM ${s.llm_calls} 次 · 消耗 ${t.total || '—'} tokens（${t.input || 0} 入 / ${t.output || 0} 出）`;
+    } else {
+      msg += ' · 全部本地正则，未调用 LLM';
+    }
+    $('ppText').textContent = msg;
+    $('ppText').title = msg;
     $('ppCount').textContent = '';
-    progressTimer = setTimeout(() => { box.style.display = 'none'; }, 1600);
+    progressTimer = setTimeout(() => { box.style.display = 'none'; }, 4800);
   } else {
     box.style.display = 'none';
   }
@@ -1129,8 +1146,9 @@ async function pickAndScan() {
   try {
     const res = await window.invoiceAPI.scanDir(dir);
     lastDirs = [dir];
+    lastSummary = res.summary || null;
     mergeItems(res.items);
-    finishParseProgress(res.items.length);
+    finishParseProgress(res.items.length, res.summary);
     if (!res.count) toast('该文件夹没有找到 PDF 文件');
   } catch (e) {
     hideParseProgress();
@@ -1147,8 +1165,9 @@ async function runParse(paths) {
   showProgress();
   try {
     const res = await window.invoiceAPI.parseFiles(paths);
+    lastSummary = res.summary || null;
     mergeItems(res.items);
-    finishParseProgress(res.items.length);
+    finishParseProgress(res.items.length, res.summary);
   } catch (e) {
     hideParseProgress();
     toast('解析失败：' + e.message, 6000);
@@ -1163,7 +1182,17 @@ function mergeItems(newItems) {
 }
 function renderMeta() {
   const ok = items.filter(i => i.status === 'ok').length;
-  $('resultMeta').textContent = `共 ${items.length} 个文件，完整识别 ${ok} 个`;
+  let meta = `共 ${items.length} 个文件，完整识别 ${ok} 个`;
+  const s = lastSummary;
+  if (s && s.llm_calls >= 0) {
+    if (s.llm_calls > 0) {
+      const t = s.tokens || {};
+      meta += ` · 🤖 LLM ${s.llm_calls} 次 · ${t.total ?? '—'} tokens`;
+    } else {
+      meta += ' · 未调用 LLM';
+    }
+  }
+  $('resultMeta').textContent = meta;
   $('resultPanel').style.display = items.length ? 'block' : 'none';
 }
 // 默认折叠显示的关键字段（其余字段点击展开）
@@ -1192,7 +1221,7 @@ function renderTable() {
       <td>${fieldChips || '<span class="ferr">未识别到字段</span>'}
           ${more ? `<button class="expand-btn" onclick="toggleExpand(${idx})">⌄ 展开全部 ${allChips.length} 项</button>` : ''}
           ${expanded ? `<button class="expand-btn" onclick="toggleExpand(${idx})">⌃ 收起</button>` : ''}
-          ${it.llm_used ? '<span class="fchip">🤖 LLM补全</span>' : ''}
+          ${it.llm_used ? `<span class="fchip" title="${it.llm_usage ? `输入 ${(it.llm_usage.input ?? 0).toLocaleString()} / 输出 ${(it.llm_usage.output ?? 0).toLocaleString()} / 合计 ${(it.llm_usage.total ?? 0).toLocaleString()} tokens` : ''}">🤖 LLM补全${it.llm_usage && it.llm_usage.total ? ` ${(it.llm_usage.total).toLocaleString()}t` : ''}</span>` : ''}
           ${it.llm_error ? `<div class="ferr">LLM: ${escapeHtml(it.llm_error)}</div>` : ''}
           ${it.errors.map(e => `<div class="ferr">${escapeHtml(e)}</div>`).join('')}</td>
       <td><textarea class="new" data-idx="${idx}" rows="1">${escapeHtml(renderTemplateJS(template, it.fields))}</textarea></td>

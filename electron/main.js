@@ -80,6 +80,8 @@ async function parseItems(paths, cfg, onProgress) {
   const llmCfg = llmConfigWithPlainKeys(); // 明文 key 只在主进程内存
   const items = [];
   const total = paths.length;
+  // 本次批量识别统计：LLM 调用次数 + token 用量（用户关心是否真的调用了 LLM / 花了多少）
+  const summary = { total, llm_calls: 0, tokens: { input: 0, output: 0, total: 0 } };
   for (let i = 0; i < total; i++) {
     const p = paths[i];
     if (onProgress) onProgress({ phase: 'regex', done: i, total, filename: path.basename(p) });
@@ -88,12 +90,21 @@ async function parseItems(paths, cfg, onProgress) {
     let errors = res.errors.slice();
     let llm_used = false;
     let llm_error = null;
+    let llm_usage = null;
     if (mode === 'llm' || (mode === 'hybrid' && LLM_TRIGGER_FIELDS.some(k => !fields[k]))) {
       if (onProgress) onProgress({ phase: 'llm', done: i, total, filename: path.basename(p) });
       try {
-        const llmFields = await llm.extractWithLlm(res.rawText || '', llmCfg);
+        const llmRes = await llm.extractWithLlm(res.rawText || '', llmCfg);
+        const llmFields = llmRes.fields;
         Object.assign(fields, mode === 'llm' ? llm.replaceAll(fields, llmFields) : llm.fillMissing(fields, llmFields));
         llm_used = true;
+        llm_usage = llmRes.usage || null;
+        if (llm_usage) {
+          summary.llm_calls++;
+          summary.tokens.input += llm_usage.input || 0;
+          summary.tokens.output += llm_usage.output || 0;
+          summary.tokens.total += llm_usage.total || 0;
+        }
         errors = errors.filter(e => !fields[keyOf(e)]);
       } catch (e) {
         llm_error = String(e.message || e);
@@ -113,9 +124,10 @@ async function parseItems(paths, cfg, onProgress) {
       errors,
       llm_used,
       llm_error,
+      llm_usage,
     });
   }
-  return items;
+  return { items, summary };
 }
 
 // 递归收集 pdf
@@ -213,12 +225,13 @@ function registerIpc() {
     const cfg = configLib.loadConfig();
     const pdfs = [];
     collectPdfs(dir, pdfs);
-    return { items: await parseItems(pdfs, cfg, progressSender(event)), count: pdfs.length, dir };
+    const { items, summary } = await parseItems(pdfs, cfg, progressSender(event));
+    return { items, summary, count: pdfs.length, dir };
   });
 
   ipcMain.handle('parse:files', async (event, paths) => {
     const cfg = configLib.loadConfig();
-    return { items: await parseItems(paths || [], cfg, progressSender(event)) };
+    return await parseItems(paths || [], cfg, progressSender(event));
   });
 
   ipcMain.handle('rename', (_e, items) => {
@@ -315,7 +328,7 @@ app.whenReady().then(() => {
           base + '样例2_电子专用发票.pdf',
           'C:/Users/wiggins/invoice-renamer/electron/tests/fixtures/26447000001568876321_2026-08-12广州晶东贸易有限公司.pdf',
         ];
-        const items = await parseItems(samples, cfg);
+        const items = (await parseItems(samples, cfg)).items;
         for (const it of items) console.log('SMOKE', it.filename, '->', it.suggested, '|', it.status);
         const allOk = items.length >= 2 && items.every(i => i.status === 'ok');
         console.log('SMOKE_DONE', allOk ? 'ALL_OK' : 'FAIL');
