@@ -15,6 +15,14 @@ contextBridge.exposeInMainWorld('invoiceAPI', {
   pickFiles: () => ipcRenderer.invoke('pick:files'),
   scanDir: (dir) => ipcRenderer.invoke('scan:dir', dir),
   parseFiles: (paths) => ipcRenderer.invoke('parse:files', paths),
+  reparseWithLlm: async (src) => {
+    try {
+      return await ipcRenderer.invoke('parse:one-llm', src);
+    } catch (e) {
+      // 去掉 Electron invoke 包装和 Error: 前缀，只留真实错误（如 'LLM API 超时'）
+      throw new Error(String(e.message || e).replace(/^Error invoking remote method '[^']+':\s*/, '').replace(/^Error:\s*/, ''));
+    }
+  },
   onParseProgress: (cb) => ipcRenderer.on('parse:progress', (_e, p) => cb(p)),
   rename: (items) => ipcRenderer.invoke('rename', items),
   undo: () => ipcRenderer.invoke('undo'),

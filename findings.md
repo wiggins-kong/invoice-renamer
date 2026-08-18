@@ -34,6 +34,8 @@
 | 撤销 = rename 映射 JSON | 批量操作可一键回滚 |
 | **识别进度事件流（v2.7）** | parseItems 逐文件经 `event.sender.send('parse:progress', {phase,done,total,filename})` 推送，渲染层订阅显示进度条；phase 区分本地解析/LLM 补全——LLM 模式每文件可等几十秒，静态 toast 无反馈 |
 | **LLM 用量统计（v2.7.1）** | 用户真实需求是「本次到底调没调 LLM + 花了多少 token」：llm.js 从响应 usage 取 prompt/completion tokens（缺失归零），parseItems 汇总 summary（llm_calls + 输入/输出/合计），完成态/结果区/行徽标三处展示；LLM 阶段进度条黄色流动条纹动画 |
+| **单文件 LLM 重识别（v2.8）** | 用户痛点：hybrid 只在关键字段缺失时调 LLM（fillMissing 填空缺）——正则解析出**非空但错误**的值时程序误判为「识别对了」，LLM 永不介入。方案：每行「🤖 LLM 重识别」按钮 → IPC `parse:one-llm` → 重新读取 PDF 文本 → **replaceAll 覆盖式**（LLM 有值即覆盖、LLM 空值保留原值）；仅更新该行（不整表重绘，避免丢失其他行手改文件名）；手动调用同样累加进 LLM 用量统计 |
+| **打包版冒烟的资源路径（v2.8）** | portable exe 自解压到临时目录，asar 只含代码。测试发票需经 `extraResources` 打进 `resources/test-fixtures/` + `resources/samples/`；smoke 内 `fs.existsSync(resources 路径)` 优先、`app.getAppPath() 源目录` 兜底——开发版（npx electron .）与打包版（exe --smoke）同一套代码自检 |
 
 ## 遇到的问题
 | 问题 | 解决方案 |

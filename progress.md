@@ -1,5 +1,23 @@
 # 进度日志
 
+## 会话：2026-08-18（v2.8：单文件 LLM 重识别——正则/混合模式下逐行强制 LLM）
+
+### 阶段 17（用户真实需求：有时程序觉得自己识别对了，但实际是错的）
+- **状态：** complete
+- 用户反馈：正则/混合模式下有时程序认为识别对了（字段非空），但实际是错的——hybrid 只在关键字段**缺失**时才调 LLM 补空缺，正则解析出「非空但错误」的值时 LLM 永不介入。需求：每个识别结果加按钮，强制重新调用 LLM 识别该文件
+- 执行的操作：
+  1. **main.js**：新增 `reparseOneWithLlm(src)` —— 重新 parsePdf 取文本 → `llm.extractWithLlm` → **replaceAll 覆盖式**（LLM 有值即覆盖正则结果，LLM 空值保留原值）→ 重算 suggested/status/errors/llm_usage；新增 IPC `parse:one-llm` 返回 `{ item, usage }`
+  2. **preload.js**：暴露 `reparseWithLlm(src)`；捕获时剥离 Electron invoke 包装前缀，只向渲染层透传真实错误（如 `LLM API 超时`）
+  3. **renderer**：表格末列「移除」改「操作」列（竖排 🤖 LLM 重识别 + ✕ 移除）；按钮仅正则/混合模式显示（LLM 模式整行已是 LLM 结果，隐藏）；点击 loading 态（禁用+「识别中…」）→ 成功**只重建该行**（把行渲染抽成 buildRow 独立函数，`replaceRow` 只换当前行——其他行手改的新文件名不丢）→ `lastSummary` 累加 LLM 次数/tokens（meta 行同步）；失败保留原字段、行内红色错误 + toast
+- 创建/修改的文件：electron/main.js、preload.js、renderer/index.html、scripts/verify-reparse.js（新）、tests/test_extractor.js、README.md、findings.md、task_plan.md
+- 验证：
+  - verify-reparse.js 27/27（按钮数量/标签/loading 禁用+文案/字段被覆盖/LLM 徽标+tokens/suggested 更新/单行更新手改保留/meta 累加/模式切换按钮显隐/失败保留原字段+行内错误+toast）+ 截图
+  - extractor 回归 5/5、--smoke ALL_OK、verify-settings 19/19、verify-secret 14/14、verify-progress 30/30、verify-layout 无回归
+  - 打包版 --smoke RESULT=ALL_OK（dist 已清理 win-unpacked）
+- 遇到的问题：
+  - **项目迁到 E 盘：回归测试与 smoke 仍指向旧 C 盘路径** → 全部改为相对路径（__dirname / app.getAppPath 解析）；打包版 asar 只含代码，测试发票经 extraResources 打进 `resources/test-fixtures` + `resources/samples`，smoke 用 existsSync 优先 resources、源目录兜底——开发版/打包版自检同一套逻辑
+  - verify-reparse 初次断言反了：手改第 1 行后重识别第 1 行会覆盖该行（预期行为）——本应验证「重识别第 2 行时第 1 行手改不丢」；失败触发改用 src 内容判断而非调用计数（计数被前序调用打乱）
+
 ## 会话：2026-08-18（v2.7.1：LLM 用量统计——明确本次是否调用 LLM + token 消耗）
 
 ### 阶段 16 修正（识别进度交互 → 用户真实需求：知道本次调没调 LLM / 花了多少 token）

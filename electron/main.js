@@ -130,6 +130,36 @@ async function parseItems(paths, cfg, onProgress) {
   return { items, summary };
 }
 
+// 单文件强制 LLM 重识别（用户点表格行「🤖 LLM 重识别」按钮时调用）：
+// 覆盖式——LLM 有值的字段一律覆盖正则结果（用户不信当前结果时才点），
+// LLM 没把握的字段（返回空）保留原值；正则 errors 中已被 LLM 补上的移除
+async function reparseOneWithLlm(src) {
+  const cfg = configLib.loadConfig();
+  const llmCfg = llmConfigWithPlainKeys();
+  const res = await parsePdf(src);
+  const llmRes = await llm.extractWithLlm(res.rawText || '', llmCfg);
+  const fields = llm.replaceAll(res.fields, llmRes.fields);
+  const errors = res.errors.slice().filter(e => !fields[keyOf(e)]);
+  const missing = KEY_FIELDS.filter(k => !fields[k]);
+  let status = 'ok';
+  if (missing.length === KEY_FIELDS.length) status = 'failed';
+  else if (missing.length) status = 'partial';
+  return {
+    item: {
+      src,
+      filename: path.basename(src),
+      fields,
+      suggested: renamer.renderTemplate(cfg.naming.template, fields),
+      status,
+      errors,
+      llm_used: true,
+      llm_error: null,
+      llm_usage: llmRes.usage || null,
+    },
+    usage: llmRes.usage || null,
+  };
+}
+
 // 递归收集 pdf
 function collectPdfs(dir, out, depth = 0) {
   if (depth > 12) return;
@@ -234,6 +264,13 @@ function registerIpc() {
     return await parseItems(paths || [], cfg, progressSender(event));
   });
 
+  // 单文件强制 LLM 重识别：正则/混合模式下用户对某行结果不放心时点按钮
+  // 返回 { item, usage }；LLM 未配置/调用失败时抛错，渲染层保留原结果
+  ipcMain.handle('parse:one-llm', async (_e, src) => {
+    if (!src) throw new Error('缺少文件路径');
+    return await reparseOneWithLlm(String(src));
+  });
+
   ipcMain.handle('rename', (_e, items) => {
     return renamer.applyRenames(items || [], configLib.loadConfig());
   });
@@ -322,11 +359,18 @@ app.whenReady().then(() => {
     (async () => {
       try {
         const cfg = configLib.loadConfig();
-        const base = 'C:/Users/wiggins/invoice-renamer/samples/';
+        // 冒烟自检的测试发票：打包版从 resources 读（extraResources 打进包）；
+        // 开发版（npx electron .）resources 无此目录，回退到项目源目录
+        const resSamples = path.join(process.resourcesPath, 'samples');
+        const resFixtures = path.join(process.resourcesPath, 'test-fixtures');
+        const projSamples = path.join(app.getAppPath(), '..', 'samples');
+        const projFixtures = path.join(app.getAppPath(), 'tests', 'fixtures');
+        const base = fs.existsSync(resSamples) ? resSamples : projSamples;
+        const fixtures = fs.existsSync(resFixtures) ? resFixtures : projFixtures;
         const samples = [
-          base + '样例1_电子普通发票.pdf',
-          base + '样例2_电子专用发票.pdf',
-          'C:/Users/wiggins/invoice-renamer/electron/tests/fixtures/26447000001568876321_2026-08-12广州晶东贸易有限公司.pdf',
+          path.join(base, '样例1_电子普通发票.pdf'),
+          path.join(base, '样例2_电子专用发票.pdf'),
+          path.join(fixtures, '26447000001568876321_2026-08-12广州晶东贸易有限公司.pdf'),
         ];
         const items = (await parseItems(samples, cfg)).items;
         for (const it of items) console.log('SMOKE', it.filename, '->', it.suggested, '|', it.status);

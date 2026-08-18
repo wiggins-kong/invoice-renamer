@@ -4,9 +4,18 @@
 做一个本地运行的「后端服务 + 网页前端」工具：识别 PDF 发票内容（发票号码、日期、销售方、金额等），按可视化拼接的命名模板批量重命名，支持 LLM 可选兜底；**打包为单文件 exe，任意 Windows 免安装运行**。
 
 ## 当前阶段
-阶段 16（识别进度交互 + LLM 用量统计）→ complete
+阶段 17（单文件 LLM 重识别）→ complete
 
 ## 各阶段
+
+### 阶段 17（v2.8：单文件 LLM 重识别——正则/混合模式下逐行强制 LLM）
+- [x] 用户痛点：混合模式只在关键字段缺失时调 LLM 补空缺——正则解析出**非空但错误**的值（如金额错位）时程序认为「识别对了」，LLM 永不介入
+- [x] main.js：新增 `reparseOneWithLlm(src)` + IPC `parse:one-llm`——重新 parsePdf 取文本 → extractWithLlm → **replaceAll 覆盖式**（LLM 有值即覆盖正则结果；LLM 空值保留原值）→ 重算 suggested/status/errors/llm_usage；返回 { item, usage }
+- [x] preload：`reparseWithLlm(src)`（剥离 Electron invoke 包装错误前缀，只留真实错误文案）
+- [x] renderer：表格末列改「操作」列（竖排 🤖 LLM 重识别 + ✕ 移除）；按钮仅正则/混合模式显示（LLM 模式隐藏，onModeChange 重绘）；点击 loading 态（禁用+识别中…）→ 成功**只重建该行**（buildRow 抽取独立函数，其他行手改的新文件名不丢）→ lastSummary 累加 LLM 次数与 tokens（meta 行同步）；失败保留原字段、行内红色错误 + toast
+- [x] 验证：scripts/verify-reparse.js 27/27（按钮显隐/loading/字段覆盖/LLM 徽标+token/suggested 更新/手改保留/meta 累加/失败保留原型与错误文案）+ 截图；extractor 回归 5/5；--smoke ALL_OK；打包版 RESULT=ALL_OK
+- [x] 附带修复：项目迁到 E 盘后所有**硬编码 C 盘路径**改为相对路径（smoke/回归测试）；打包版冒烟改读 extraResources 打入的测试发票（test-fixtures/samples），任意机器可自检
+- **状态：** complete
 
 ### 阶段 16（v2.7 / v2.7.1：识别进度条 + LLM 用量统计）
 - [x] 主进程 parseItems 逐文件推送进度事件（phase=regex/llm + done/total/filename），scan:dir / parse:files 经 event.sender 转发（窗口销毁自动停止）

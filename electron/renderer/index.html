@@ -311,6 +311,17 @@
   }
   .rm-btn:hover { color: var(--err); border-color: var(--err); background: var(--err-soft); }
 
+  /* 行操作列：🤖 LLM 重识别 + 移除（竖排） */
+  .row-ops { display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
+  .llm-rebtn {
+    background: var(--accent-soft); border: 1px solid var(--accent-soft-strong); color: var(--accent-text);
+    height: 24px; border-radius: 6px; cursor: pointer; font-size: 11.5px; font-weight: 600;
+    white-space: nowrap; line-height: 1; padding: 0 8px;
+    transition: filter .15s, opacity .15s;
+  }
+  .llm-rebtn:hover:not(:disabled) { filter: brightness(0.96); }
+  .llm-rebtn:disabled { opacity: .55; cursor: wait; }
+
   /* ============ 操作条 ============ */
   .actions { display: flex; gap: 9px; margin-top: 13px; align-items: center; flex-wrap: wrap; }
   .spacer { flex: 1; }
@@ -549,7 +560,7 @@
         <table>
           <thead><tr>
             <th style="width:18%">原文件名</th><th>识别字段</th>
-            <th style="width:30%">新文件名（可编辑）</th><th>状态</th><th style="width:44px">移除</th>
+            <th style="width:30%">新文件名（可编辑）</th><th>状态</th><th style="width:118px">操作</th>
           </tr></thead>
           <tbody id="tableBody"></tbody>
           <tfoot id="tableFoot"></tfoot>
@@ -783,6 +794,7 @@ function onModeChange() {
     llm: '当前：仅 LLM — 所有字段都由大模型提取，需要配置 API Key。'
   };
   $('modeHint').textContent = hints[m];
+  if (items.length) renderTable(); // 重绘以显示/隐藏「🤖 LLM 重识别」按钮（LLM 模式隐藏）
 }
 function parsingToast() {
   return {
@@ -1207,33 +1219,79 @@ function renderTable() {
   const tb = $('tableBody'); tb.innerHTML = '';
   // 先显示面板：display:none 时 textarea scrollHeight=0，autoGrow 会算成半行高度
   $('resultPanel').style.display = items.length ? 'block' : 'none';
-  items.forEach((it, idx) => {
-    const tr = document.createElement('tr');
-    const expanded = expandedRows.has(it.src);
-    const allChips = Object.entries(it.fields).filter(([, v]) => v);
-    const shown = expanded ? allChips : allChips.filter(([k]) => KEY_FIELD_KEYS.includes(k));
-    const fieldChips = shown.map(([k, v]) =>
-      `<span class="fchip"><b>${LABELS[k] || k}</b> ${escapeHtml(v)}</span>`).join('');
-    const more = !expanded && allChips.length > shown.length;
-    const badge = { ok: '✓ 完整', partial: '⚠ 部分', failed: '✕ 失败' }[it.status];
-    tr.innerHTML = `
-      <td><div class="fname">${escapeHtml(it.filename)}</div></td>
-      <td>${fieldChips || '<span class="ferr">未识别到字段</span>'}
-          ${more ? `<button class="expand-btn" onclick="toggleExpand(${idx})">⌄ 展开全部 ${allChips.length} 项</button>` : ''}
-          ${expanded ? `<button class="expand-btn" onclick="toggleExpand(${idx})">⌃ 收起</button>` : ''}
-          ${it.llm_used ? `<span class="fchip" title="${it.llm_usage ? `输入 ${(it.llm_usage.input ?? 0).toLocaleString()} / 输出 ${(it.llm_usage.output ?? 0).toLocaleString()} / 合计 ${(it.llm_usage.total ?? 0).toLocaleString()} tokens` : ''}">🤖 LLM补全${it.llm_usage && it.llm_usage.total ? ` ${(it.llm_usage.total).toLocaleString()}t` : ''}</span>` : ''}
-          ${it.llm_error ? `<div class="ferr">LLM: ${escapeHtml(it.llm_error)}</div>` : ''}
-          ${it.errors.map(e => `<div class="ferr">${escapeHtml(e)}</div>`).join('')}</td>
-      <td><textarea class="new" data-idx="${idx}" rows="1">${escapeHtml(renderTemplateJS(template, it.fields))}</textarea></td>
-      <td><span class="badge ${it.status}">${badge}</span></td>
-      <td><button class="rm-btn" title="移除该文件" onclick="removeRow(${idx})">✕</button></td>`;
-    tb.appendChild(tr);
-  });
+  items.forEach((it, idx) => tb.appendChild(buildRow(it, idx)));
   // textarea 高度自适应（内容折行后完整显示）
   // 同步先算一次 + rAF 再算一次：显示面板后布局/列宽才最终确定，折行结果才准确
   tb.querySelectorAll('.new').forEach(autoGrow);
   requestAnimationFrame(() => tb.querySelectorAll('.new').forEach(autoGrow));
   renderTotals();
+}
+
+// 构建单行（独立函数：LLM 重识别成功后只替换该行，不整表重绘以免丢失其他行手改的新文件名）
+function buildRow(it, idx) {
+  const tr = document.createElement('tr');
+  const expanded = expandedRows.has(it.src);
+  const allChips = Object.entries(it.fields).filter(([, v]) => v);
+  const shown = expanded ? allChips : allChips.filter(([k]) => KEY_FIELD_KEYS.includes(k));
+  const fieldChips = shown.map(([k, v]) =>
+    `<span class="fchip"><b>${LABELS[k] || k}</b> ${escapeHtml(v)}</span>`).join('');
+  const more = !expanded && allChips.length > shown.length;
+  const badge = { ok: '✓ 完整', partial: '⚠ 部分', failed: '✕ 失败' }[it.status];
+  // 操作列：仅「正则/混合」模式提供 LLM 重识别（LLM 模式整行已是 LLM 结果，无意义）
+  const showLlmBtn = $('mode').value !== 'llm';
+  tr.innerHTML = `
+    <td><div class="fname">${escapeHtml(it.filename)}</div></td>
+    <td>${fieldChips || '<span class="ferr">未识别到字段</span>'}
+        ${more ? `<button class="expand-btn" onclick="toggleExpand(${idx})">⌄ 展开全部 ${allChips.length} 项</button>` : ''}
+        ${expanded ? `<button class="expand-btn" onclick="toggleExpand(${idx})">⌃ 收起</button>` : ''}
+        ${it.llm_used ? `<span class="fchip" title="${it.llm_usage ? `输入 ${(it.llm_usage.input ?? 0).toLocaleString()} / 输出 ${(it.llm_usage.output ?? 0).toLocaleString()} / 合计 ${(it.llm_usage.total ?? 0).toLocaleString()} tokens` : ''}">🤖 LLM补全${it.llm_usage && it.llm_usage.total ? ` ${(it.llm_usage.total).toLocaleString()}t` : ''}</span>` : ''}
+        ${it.llm_error ? `<div class="ferr">LLM: ${escapeHtml(it.llm_error)}</div>` : ''}
+        ${it.errors.map(e => `<div class="ferr">${escapeHtml(e)}</div>`).join('')}</td>
+    <td><textarea class="new" data-idx="${idx}" rows="1">${escapeHtml(renderTemplateJS(template, it.fields))}</textarea></td>
+    <td><span class="badge ${it.status}">${badge}</span></td>
+    <td><div class="row-ops">
+      ${showLlmBtn ? `<button class="llm-rebtn" title="强制调用 LLM 重新识别该文件并覆盖当前字段" onclick="reparseWithLlm(${idx}, this)">🤖 LLM 重识别</button>` : ''}
+      <button class="rm-btn" title="移除该文件" onclick="removeRow(${idx})">✕</button>
+    </div></td>`;
+  return tr;
+}
+
+// 单文件强制 LLM 重识别：只更新该行，成功累加本次 LLM 次数/tokens 到全局统计；
+// 失败保留原字段，行内显示 LLM 错误
+async function reparseWithLlm(idx, btn) {
+  const it = items[idx];
+  if (!it) return;
+  if (btn) { btn.disabled = true; btn.textContent = '🤖 识别中…'; }
+  try {
+    const res = await window.invoiceAPI.reparseWithLlm(it.src);
+    items[idx] = res.item;
+    // 累加统计：本次是手动单文件 LLM 调用（用户主动要求，需如实计入）
+    lastSummary = lastSummary || { llm_calls: 0, tokens: { input: 0, output: 0, total: 0 } };
+    lastSummary.llm_calls += 1;
+    const u = res.usage || {};
+    lastSummary.tokens.input += u.input || 0;
+    lastSummary.tokens.output += u.output || 0;
+    lastSummary.tokens.total += u.total || 0;
+    replaceRow(idx);
+    toast(`✓ ${it.filename} 已由 LLM 重新识别（${res.item.status === 'ok' ? '完整' : res.item.status === 'partial' ? '部分' : '失败'}）`);
+  } catch (e) {
+    items[idx].llm_error = String(e.message || e);
+    replaceRow(idx);
+    toast('LLM 重识别失败：' + e.message, 5000);
+  }
+}
+
+// 只重建指定行（保留其他行现状）
+function replaceRow(idx) {
+  const tb = $('tableBody');
+  const old = tb.children[idx];
+  if (!old) return;
+  const tr = buildRow(items[idx], idx);
+  tb.replaceChild(tr, old);
+  tr.querySelectorAll('.new').forEach(autoGrow);
+  requestAnimationFrame(() => tr.querySelectorAll('.new').forEach(autoGrow));
+  renderTotals();
+  renderMeta();
 }
 
 function toggleExpand(idx) {
