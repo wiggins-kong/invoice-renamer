@@ -2,8 +2,8 @@
 
 ## 📌 当前快照（新会话 / 拷机续做从这里开始）
 
-- **最新版本**：v3.1.1（卡片玻璃回到 v2.9 全云母材质；背板跟随系统 Mica；布局/JS/DOM 不动）
-- **最近 commit**：`cd4a68c v3.1.1：卡片玻璃回到 v2.9 全云母材质`
+- **最新版本**：v3.1.2（文件按钮 emoji 换线性 SVG 图标；材质与背板同 v3.1.1）
+- **最近 commit**：`64f3299 v3.1.2：文件按钮 emoji 换线性 SVG 图标`
 - **本机工作目录**：`E:\invoice-renamer`（桌面版在 `electron/`，Web 版已移除）
 - **产品形态**：Electron 桌面 app（`electron/dist/发票识别重命名.exe` 打包产物已就绪），识别 PDF 发票 → 按可视化模板批量重命名
 - **功能全貌（v2.x 演进）**：
@@ -72,6 +72,21 @@
 - 验证：开发版冒烟 `SMOKE_DONE ALL_OK`（4/4）；重建 `dist/发票识别重命名.exe`（96.6MB）；win-unpacked 打包版冒烟 `RESULT=ALL_OK`；git 工作树干净（commit `cd4a68c`）
 - 遇到的问题：
   - **portable exe --smoke 冒烟无回显**：portable 外壳自解压后由子进程运行应用，子进程 stdout 未继承到 shell 管道 → 冒烟输出为空。改用 `dist/win-unpacked/发票识别重命名.exe --smoke` 跑（同代码打包版）拿到 `SMOKE_DONE ALL_OK`（进度日志此前记的"exe --smoke"实际是 win-unpacked 那条，portable 单文件本身看不到冒烟回显属正常）
+
+
+## 会话：2026-08-18（v3.1.2：文件按钮 emoji 换线性 SVG 图标）
+
+### 阶段 22（用户反馈：「选择文件夹/选择文件」按钮旁的小图标与整体风格不合）
+- **状态：** complete
+- 用户反馈：两个文件按钮旁的小图标（原为 emoji 📁 / 📄）跟整体设计风格不合
+- 根因：整体图标体系是**内联线性描边 SVG**（齿轮、最小化/最大化/关闭、logo 下载箭头，均 `stroke=currentColor` + 圆角端点），只有这两个按钮用了 emoji——风格不统一，高 DPI 下 emoji 渲染也会糊
+- 执行的操作（只动这两个按钮的图标，功能/布局/JS 不动）：
+  1. 📁 → `folder-open` 线性描边 SVG（open-folder 语义，对应「选择文件夹」）
+  2. 📄 → 文档 `file` 线性描边 SVG（带折角 + 内容行，对应「选择文件」）
+  3. 风格统一到齿轮基线：`viewBox 0 0 24 24`、`stroke-width 1.8`、`stroke=currentColor`（自动继承主按钮白字/soft 按钮蓝字）、`stroke-linecap/linejoin: round`；`width/height 16`
+  4. 因 `.btn` 已是 `inline-flex + gap:5px`，去掉 emoji 后的空格，间距由 gap 接管；图标旁有可见文字 → 标 `aria-hidden="true"`（装饰性图标规范）
+- 验证：开发版冒烟 `SMOKE_DONE ALL_OK`；临时可见窗口脚本 capturePage 截图 + MiMo 视觉复核——两个图标均为细线描边、与文字对齐间距合适、与齿轮统一，整界面无 emoji 图标残留；重建 exe（96.6MB）+ win-unpacked 打包版冒烟 `RESULT=ALL_OK`；git commit `64f3299`
+- 注意：界面其它处的 🤖（LLM 重识别/补全徽标）与 🚀（全部重命名）是**语义状态/动作 emoji**，非装饰性 UI 图标，用户未反馈不合，保留
 
 ## 会话：2026-08-18（v3.0/v3.0.1：毛玻璃背板 + 云母卡片精修）
 
