@@ -2,15 +2,16 @@
 
 ## 📌 当前快照（新会话 / 拷机续做从这里开始）
 
-- **最新版本**：v2.9.1（UI 布局重构：单列工作流 + Mica 云母材质 + MsyhSb 全局字体）
-- **最近 commit**：`0c49842 fix: 窄窗口下选择按钮保持左右排列 + 预设下拉自适应宽度显示完整`
+- **最新版本**：v3.0（毛玻璃背板 + 云母卡片精修 + 顶栏设置按钮放大；JS/DOM 全部保留）
+- **最近 commit**：`<待提交> v3.0`
 - **本机工作目录**：`E:\invoice-renamer`（桌面版在 `electron/`，Web 版已移除）
 - **产品形态**：Electron 桌面 app（`electron/dist/发票识别重命名.exe` 打包产物已就绪），识别 PDF 发票 → 按可视化模板批量重命名
 - **功能全貌（v2.x 演进）**：
   - v2.7 / v2.7.1：识别进度条 + LLM 用量统计（本次调用次数/tokens）
   - v2.8：单文件 LLM 重识别（每行「🤖 LLM 重识别」强制覆盖式）
   - v2.9：UI 布局重构（取消左栏 → 顶栏分段控件 + ⚙ 设置弹窗；单列工作流；表格加价税合计列；Mica 云母材质）
-  - v2.9.1：恢复全局 MsyhSb 字体（此前误删 @font-face）+ 移除顶栏主题按钮
+  - v2.9.1：恢复全局 MsyhSb 字体 + 移除顶栏主题按钮
+  - **v3.0：毛玻璃背板 + 云母卡片精修（方案 A 落地）**——柔和环境色渐变背板（淡蓝/暖米），Win11 透出系统 Mica；卡片玻璃更通透 + 内顶部高光；删除顶栏主题按钮、主题收进设置弹窗（提防 v2.9.1 select#theme 不同步坑）；设置按钮 32→40px 放大加玻璃底
 - **验证命令**（在 `electron/` 下）：
   - `node tests/test_extractor.js` → 解析回归 5/5
   - `npx electron . --smoke` → 冒烟 ALL_OK
@@ -20,9 +21,31 @@
   - 16MB 全局字体 `renderer/assets/msyh-semibold.ttf` 启动期加载占主线程——verify-progress 需等 `document.fonts.ready`
   - 主题下拉必须经 `applyThemeSel()` 同步隐藏 `#theme` 再应用（见阶段 18 修复）
   - 打包版冒烟用 `exe --smoke`（含 extraResources 测试发票）
+  - **毛玻璃背板注意**：真实 app 的磨砂由系统 Mica 提供，渲染层只做环境色渐变打底（勿加全屏 blur 层遮挡 Mica）；离屏截图（verify-layout 的 capturePage）不渲染 backdrop-filter，看效果要用可见窗口
 - 全部历史按会话记录见下方各「会话」段
 
 ---
+
+## 会话：2026-08-18（v3.0：毛玻璃背板 + 云母卡片精修）
+
+### 阶段 19（用户选定方案 A 落地：毛玻璃底板 + 云母卡片 + 顶栏精修）
+- **状态：** complete
+- 用户流程：① 要求先看界面重构方案 → 产出 A(极简玻璃延续)/B(账本深色)/C(Bento 工作台)/D(结果前置) 四方案；② 用户选 A + C（先看 C）；③ C 的 Bento mockup 先出；④ 用户最终选定**方案 A** 并明确「底板做成毛玻璃质感，前面的卡片还是云母材质」；⑤ 初版 mockup 彩色光斑被否 → 参考用户图片改柔和毛玻璃质感；⑥ 用户提出主题按钮困惑 → 决定删主题按钮、主题进设置、放大设置按钮
+- mockup-first 流程（按规格）：独立 `design-mockup-A.html/C.html`（自包含 token+demo 数据）→ 可见窗口 capturePage 截图 → MiMo 视觉自查 → 预览面板给用户 → 批准后才落地
+- 执行的操作（落地到真实 renderer/index.html，JS 与 DOM id 全保留）：
+  1. **毛玻璃背板**：body 背景从纯渐变改为「柔和环境色 radial-gradient（淡蓝/暖米/浅灰，大面积低饱和晕开）+ 原渐变」——Win11 透出系统 Mica，Win10 读作毛玻璃纯色
+  2. **云母卡片**：`.glass` 加 `inset 0 1px 0 rgba(255,255,255,.55)` 内顶部高光 + `blur(20px) saturate(1.35)`；玻璃透明度 root 0.70→0.58 / strong 0.88→0.82 / 2 0.55→0.44
+  3. **顶栏**：删除主题按钮（主题仅设置在 themeSel），设置按钮 `.icon-btn#settingsBtn` 放大 32→40px + 玻璃底 + SVG 齿轮 18px
+- 验证：
+  - scan-dom-ids 一致性良好（USED_NOT_DEFINED 仅 llmModel=动态创建的已知项）
+  - extractor 回归 5/5；dev 冒烟 SMOKE_DONE ALL_OK
+  - verify-settings/secret/progress/reparse 全 ALL_PASS；verify-layout 双尺寸指标健康（按钮单行 36px、无溢出、拖拽区可见、无横滚）
+  - MiMo 视觉自查真实可见窗口：背板柔和渐变无刺眼光斑、卡片半透明显层次、设置齿轮协调、文字可读无重叠
+- 遇到的问题：
+  - **离屏截图看不到毛玻璃**：verify-layout 的 capturePage 在 offscreen/隐藏窗口不渲染 backdrop-filter → 误判「背板纯白」。改用**可见窗口**脚本（shot-renderer-visible.js）截图验证真实效果；这也是 v2.9 progress 里记过的 backdrop-filter 合成层问题
+  - **视觉模型配置排查**：用户以为配了 mimo 视觉但失败——config auxiliary.vision.provider=xiaomi 无 XIAOMI_API_KEY 凭证（.env 注释占位）；曾切 opencode-go 但该通道只提供文本模型（mimo-v2.5 被路由到 DeepSeek-V4-Flash，400 not multimodal）；最终用户重跑 hermes setup 填好 key，xiaomi 视觉恢复可用
+  - **后台视觉反复报「xiaomi not configured」** → 需用户在 Hermes 设置里补 XIAOMI_API_KEY 才真正可用
+
 
 ## 会话：2026-08-18（v2.9/2.9.1 + 清理）
 

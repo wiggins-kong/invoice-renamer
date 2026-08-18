@@ -38,6 +38,8 @@
 | **打包版冒烟的资源路径（v2.8）** | portable exe 自解压到临时目录，asar 只含代码。测试发票需经 `extraResources` 打进 `resources/test-fixtures/` + `resources/samples/`；smoke 内 `fs.existsSync(resources 路径)` 优先、`app.getAppPath() 源目录` 兜底——开发版（npx electron .）与打包版（exe --smoke）同一套代码自检 |
 | **UI 布局重构（v2.9）** | 用户需求是**布局/交互结构重排**（非换皮肤）:取消低频设置独占的左栏 → 顶栏分段控件 + ⚙ 设置弹窗;单列工作流 = 使用顺序(拖入→配模板→看结果→重命名);结果表格拿最大面积(flex:1);表格加价税合计列;附加需求 Mica 云母材质(Win11 backgroundMaterial + 渲染层半透明玻璃,旧系统降级) |
 | **UI 重构的兼容性策略（v2.9）** | 大改 HTML 结构时 JS 逻辑与全部 DOM id 保留不动——高频控件(模式分段/主题图标)改为驱动**隐藏的 select#mode / select#theme**,所有依赖 `$('mode').value` 的旧逻辑与验证脚本零改动;验证脚本仅适配 settingsModal 显隐从 style.display 改 classList('show') |
+| **毛玻璃背板 + 云母卡片精修（v3.0）** | 用户选定方案 A(极简玻璃延续)+ 明确要「毛玻璃背板」。「背板毛玻璃」的正确落地:Win11 由主进程系统 Mica(`backgroundMaterial:'mica'`)提供真实磨砂,渲染层只做**柔和环境色渐变**打底(淡蓝/暖米 radial-gradient 大面积低饱和晕开)——不能加全屏 blur 磨砂层,否则遮挡系统 Mica;Win10 自动读作柔和毛玻璃渐变。卡片增强:玻璃透明度 0.70→0.58 + `inset 0 1px 0 rgba(255,255,255,.55)` 内顶部高光 + backdrop-filter saturate 1.35,与背板分层次 |
+| **顶栏不再放主题按钮（v3.0）** | 用户确认:主题按钮无法给出「跟随系统/明亮」的明确提示,且重蹈 v2.9.1 已修复的「选什么都是暗色」(隐藏 select#theme 多驱动点不同步)覆辙 → 删掉顶栏主题入口,主题选择保留在设置弹窗(themeSel:跟随系统/亮色/暗色);设置按钮放大 32→40px 加玻璃底,清晰可点触。自定义 frameless 顶栏本来就有窗口控制按钮,不再叠功能按钮 |
 
 ## 遇到的问题
 | 问题 | 解决方案 |
