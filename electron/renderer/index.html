@@ -367,10 +367,6 @@ tfoot td { background: var(--glass); border-top: 1px solid var(--line-strong); f
 ::-webkit-scrollbar { width: 9px; height: 9px; }
 ::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
 ::-webkit-scrollbar-track { background: transparent; }
-
-@media (max-width: 1100px) {
-  .drop-btns { flex-direction: column; gap: 6px; }
-}
 </style>
 </head>
 <body data-theme="light">
@@ -479,7 +475,7 @@ tfoot td { background: var(--glass); border-top: 1px solid var(--line-strong); f
         <span class="spacer"></span>
         <span class="preset-inline">
           <span class="sep-grp muted">预设</span>
-          <select id="preset" onchange="applyPreset()" style="width:155px">
+          <select id="preset" onchange="applyPreset()" style="width:auto; min-width:170px">
             <option value="default">销售方_日期_金额_号码</option>
             <option value="dni">日期_号码_金额</option>
             <option value="nis">号码_销售方_金额</option>
