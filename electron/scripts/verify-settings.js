@@ -66,11 +66,12 @@ app.whenReady().then(async () => {
       const R1 = (name, ok) => out.push({ name, ok });
 
       const entry = $('settingsBtn');
-      R1('entry-visible', !!entry && entry.style.display !== 'none' && getComputedStyle(entry).position === 'fixed');
+      // 新布局：设置入口移到顶栏右侧图标（不再是左下角 fixed 齿轮）
+      R1('entry-visible', !!entry && entry.style.display !== 'none' && entry.closest('.titlebar') !== null);
 
       openSettings();
       await tick(60);
-      R1('modal-opens', $('settingsModal').style.display === 'flex');
+      R1('modal-opens', $('settingsModal').classList.contains('show'));
       R1('provider-deepseek', $('llmProvider').value === 'deepseek');
       R1('base-deepseek', $('llmBase').value === 'https://api.deepseek.com/v1');
       // 已保存 key：不回填明文，placeholder 显示掩码
@@ -88,7 +89,7 @@ app.whenReady().then(async () => {
       // 取消：恢复 deepseek + 掩码
       closeSettings(true);
       await tick(40);
-      R1('cancel-closes', $('settingsModal').style.display === 'none');
+      R1('cancel-closes', !$('settingsModal').classList.contains('show'));
       R1('cancel-restore-provider', $('llmProvider').value === 'deepseek');
       R1('cancel-restore-mask', $('llmKey').placeholder.includes('sk-***9b4'));
 
@@ -101,7 +102,7 @@ app.whenReady().then(async () => {
       R1('typing-hides-clear', $('llmClearBtn').style.display === 'none');
       await saveSettings();
       await tick(150);
-      R1('save-closes', $('settingsModal').style.display === 'none');
+      R1('save-closes', !$('settingsModal').classList.contains('show'));
       return out;
     })();
   `);
@@ -123,7 +124,7 @@ app.whenReady().then(async () => {
       await tick(50);
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
       await tick(40);
-      out.push({ name: 'esc-closes', ok: $('settingsModal').style.display === 'none' });
+      out.push({ name: 'esc-closes', ok: !$('settingsModal').classList.contains('show') });
 
       $('mode').value = 'regex';
       onModeChange();
@@ -138,7 +139,7 @@ app.whenReady().then(async () => {
       document.head.appendChild(st);
       openSettings();
       await tick(250);
-      out.push({ name: 'reopen-for-shot', ok: $('settingsModal').style.display === 'flex' });
+      out.push({ name: 'reopen-for-shot', ok: $('settingsModal').classList.contains('show') });
       return out;
     })();
   `);

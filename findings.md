@@ -36,6 +36,8 @@
 | **LLM 用量统计（v2.7.1）** | 用户真实需求是「本次到底调没调 LLM + 花了多少 token」：llm.js 从响应 usage 取 prompt/completion tokens（缺失归零），parseItems 汇总 summary（llm_calls + 输入/输出/合计），完成态/结果区/行徽标三处展示；LLM 阶段进度条黄色流动条纹动画 |
 | **单文件 LLM 重识别（v2.8）** | 用户痛点：hybrid 只在关键字段缺失时调 LLM（fillMissing 填空缺）——正则解析出**非空但错误**的值时程序误判为「识别对了」，LLM 永不介入。方案：每行「🤖 LLM 重识别」按钮 → IPC `parse:one-llm` → 重新读取 PDF 文本 → **replaceAll 覆盖式**（LLM 有值即覆盖、LLM 空值保留原值）；仅更新该行（不整表重绘，避免丢失其他行手改文件名）；手动调用同样累加进 LLM 用量统计 |
 | **打包版冒烟的资源路径（v2.8）** | portable exe 自解压到临时目录，asar 只含代码。测试发票需经 `extraResources` 打进 `resources/test-fixtures/` + `resources/samples/`；smoke 内 `fs.existsSync(resources 路径)` 优先、`app.getAppPath() 源目录` 兜底——开发版（npx electron .）与打包版（exe --smoke）同一套代码自检 |
+| **UI 布局重构（v2.9）** | 用户需求是**布局/交互结构重排**（非换皮肤）:取消低频设置独占的左栏 → 顶栏分段控件 + ⚙ 设置弹窗;单列工作流 = 使用顺序(拖入→配模板→看结果→重命名);结果表格拿最大面积(flex:1);表格加价税合计列;附加需求 Mica 云母材质(Win11 backgroundMaterial + 渲染层半透明玻璃,旧系统降级) |
+| **UI 重构的兼容性策略（v2.9）** | 大改 HTML 结构时 JS 逻辑与全部 DOM id 保留不动——高频控件(模式分段/主题图标)改为驱动**隐藏的 select#mode / select#theme**,所有依赖 `$('mode').value` 的旧逻辑与验证脚本零改动;验证脚本仅适配 settingsModal 显隐从 style.display 改 classList('show') |
 
 ## 遇到的问题
 | 问题 | 解决方案 |

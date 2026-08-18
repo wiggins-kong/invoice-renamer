@@ -180,6 +180,10 @@ function createWindow() {
   const cfg = configLib.loadConfig();
   const theme = (cfg.ui && cfg.ui.theme) || 'system';
   const dark = theme === 'dark' || (theme === 'system' && nativeTheme.shouldUseDarkColors);
+  // Windows 11 云母材质（Mica）：窗口背景半透明磨砂随壁纸色调；
+  // Win10/更低自动降级为纯色背景（backgroundColor），渲染层同源色系叠加
+  const isWin11 = process.platform === 'win32' &&
+    (process.getSystemVersion && Number(String(process.getSystemVersion()).split('.')[2] || 0) >= 22000);
   const win = new BrowserWindow({
     width: 1180,
     height: 820,
@@ -188,7 +192,8 @@ function createWindow() {
     title: '发票识别重命名',
     icon: path.join(__dirname, 'build', 'icon.ico'),
     frame: false, // 无边框：自绘标题栏（视觉与主题统一）
-    backgroundColor: dark ? '#0f1420' : '#f2f5fa',
+    backgroundColor: isWin11 ? '#00000000' : (dark ? '#141a26' : '#eef2f8'),
+    ...(isWin11 ? { backgroundMaterial: 'mica' } : {}),
     show: false,
     autoHideMenuBar: true,
     webPreferences: {
@@ -333,7 +338,7 @@ app.whenReady().then(() => {
                 status:'ok', errors:[], llm_used:false, llm_error:null },
               { src:'C:/demo/1 (3).pdf', filename:'1 (3).pdf',
                 fields:{ invoice_no:'26447000001569602479', date:'2026年08月12日', seller:'广州晶东贸易有限公司', buyer:'广州白云山明兴制药有限公司', amount_excl:'540.85', tax:'70.31', amount:'611.16', amount_cn:'陆佰壹拾壹元壹角陆分', type:'电子专用发票', seller_tax_id:'91440101664041243T', buyer_tax_id:'9144010119046020XE' },
-                status:'ok', errors:[], llm_used:false, llm_error:null },
+                status:'ok', errors:[], llm_used:true, llm_error:null, llm_usage:{ input:812, output:96, total:908 } },
             ];
             items = demoItems; renderTable(); renderMeta();
               await document.fonts.ready;
