@@ -646,12 +646,12 @@ function applyTheme() {
     mq.addEventListener('change', () => { if (themeMode === 'system') applyTheme(); });
   }
 }
-// 设置弹窗主题下拉：把选择同步到隐藏 select#theme 再应用+保存
+// 设置弹窗主题下拉：把选择同步到隐藏 select#theme 并立即应用做**实时预览**，
+// 但**不立即写入磁盘**——真正生效在点「保存」（saveConfig），点「取消」回退到打开前的主题
 // （applyTheme/collectSettings 都读 #theme，不同步的话永远按 system=系统主题）
 function applyThemeSel() {
   $('theme').value = $('themeSel').value;
   applyTheme();
-  saveConfig();
 }
 // 主题切换：主界面不放按钮（单按钮看不出当前状态且不常用），
 // 在设置弹窗「界面」区块用下拉选择（跟随系统/亮色/暗色），保存后生效
@@ -890,6 +890,9 @@ function openSettings() {
     draft: { ...keyDraft },
     model: modelValue,
     base: $('llmBase').value,
+    theme: $('theme').value,      // 主题：打开时快照，取消时回退（保存才生效）
+    themeSel: $('themeSel').value,
+    themeResolved: document.documentElement.dataset.theme, // 已解析的实际主题（避免取消时 matchMedia 被预览污染）
   };
   applyKeyField(p);
   fetchModels(false); // 重新拉取模型列表（无列表时静默回退为输入框）
@@ -904,6 +907,14 @@ function closeSettings(restore) {
     $('llmProvider').value = settingsSnapshot.provider;
     $('llmProvider').dataset.prevProvider = settingsSnapshot.provider;
     $('llmBase').value = settingsSnapshot.base;
+    // 回退主题：恢复打开前的模式与**已解析的实际主题**，
+    // 直接写 data-theme 而非重新 resolveTheme（setTheme 预览会改变 color-scheme，
+    // 污染 matchMedia，导致 'system' 被错误解析成预览过的主题）；不写盘，磁盘仍是旧主题
+    $('theme').value = settingsSnapshot.theme;
+    $('themeSel').value = settingsSnapshot.themeSel;
+    themeMode = settingsSnapshot.theme;
+    document.documentElement.dataset.theme = settingsSnapshot.themeResolved;
+    document.body.dataset.theme = settingsSnapshot.themeResolved;
     applyKeyField(settingsSnapshot.provider);
     renderModelField();
     settingsSnapshot = null;
