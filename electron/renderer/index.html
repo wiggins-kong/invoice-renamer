@@ -23,9 +23,9 @@
 :root {
   --mica-top: rgba(242, 246, 253, 0.86);
   --mica-bottom: rgba(233, 240, 252, 0.58);
-  --glass: rgba(255, 255, 255, 0.58);
-  --glass-strong: rgba(255, 255, 255, 0.82);
-  --glass-2: rgba(255, 255, 255, 0.44);
+  --glass: rgba(255, 255, 255, 0.50);
+  --glass-strong: rgba(255, 255, 255, 0.78);
+  --glass-2: rgba(255, 255, 255, 0.36);
   --glass-border: rgba(255, 255, 255, 0.78);
   --line: rgba(60, 76, 110, 0.14);
   --line-strong: rgba(60, 76, 110, 0.28);
@@ -75,13 +75,10 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; }
 body {
-  /* 毛玻璃背板 v3.0：柔和环境色(淡蓝/暖米)大面积低饱和晕开，
-     磨砂雾感叠加。Win11 时透出主进程系统 Mica(backgroundColor 兜底)；
-     Win10 读作柔和毛玻璃纯色背景 */
+  /* 背板 v3.0.1：跟随系统 Mica —— 渲染层只保留干净的极淡冷色渐变，
+     Win11 由主进程系统 Mica(backgroundMaterial) 主导并随壁纸取色；
+     Win10 自动降级读作接近纯色的冷灰蓝背景(backgroundColor 兜底) */
   background:
-    radial-gradient(95% 75% at 22% 14%,  rgba(168,196,235,.26), transparent 58%),
-    radial-gradient(85% 68% at 84% 28%, rgba(255,213,178,.20), transparent 60%),
-    radial-gradient(120% 90% at 50% 108%, rgba(198,206,224,.26), transparent 62%),
     linear-gradient(180deg, var(--mica-top), var(--mica-bottom)) fixed;
   color: var(--text);
   font: 14px/1.55 'MsyhSb', 'Microsoft YaHei', 'PingFang SC', 'Segoe UI', system-ui, sans-serif;
