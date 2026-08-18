@@ -556,7 +556,7 @@ tfoot td { background: var(--glass); border-top: 1px solid var(--line-strong); f
       <div class="modal-sec-title" style="margin-top:16px">界面</div>
       <div class="field">
         <label class="f" for="themeSel">主题</label>
-        <select id="themeSel" onchange="applyTheme(); saveConfig()">
+        <select id="themeSel" onchange="applyThemeSel()">
           <option value="system">跟随系统</option>
           <option value="light">亮色</option>
           <option value="dark">暗色</option>
@@ -637,6 +637,13 @@ function applyTheme() {
     mq._bound = true;
     mq.addEventListener('change', () => { if (themeMode === 'system') applyTheme(); });
   }
+}
+// 设置弹窗主题下拉：把选择同步到隐藏 select#theme 再应用+保存
+// （applyTheme/collectSettings 都读 #theme，不同步的话永远按 system=系统主题）
+function applyThemeSel() {
+  $('theme').value = $('themeSel').value;
+  applyTheme();
+  saveConfig();
 }
 // 主题切换：主界面不放按钮（单按钮看不出当前状态且不常用），
 // 在设置弹窗「界面」区块用下拉选择（跟随系统/亮色/暗色），保存后生效
