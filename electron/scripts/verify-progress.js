@@ -56,6 +56,13 @@ app.whenReady().then(async () => {
   });
   await win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
 
+  // 等 MsyhSb 字体就绪:16MB 全局字体启动期加载会占主线程,若不等就绪,
+  // 后面的 90/190/310/450ms 时序断言会因 reflow 错过窗口(偶发 11-12 FAIL)
+  await win.webContents.executeJavaScript(`document.fonts.ready.then(() => new Promise(r => {
+    // 再给一帧让字体 reflow 完成,避免立即测量到旧布局
+    requestAnimationFrame(() => requestAnimationFrame(r));
+  }))`);
+
   const results = [];
   const R = (name, ok, extra) => results.push({ name, ok, extra });
 
