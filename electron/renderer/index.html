@@ -286,7 +286,7 @@ input:focus, select:focus { border-color: var(--accent); box-shadow: var(--focus
 select { cursor: pointer; }
 
 /* ============ 第三层：识别结果（主区域，最大面积） ============ */
-#resultCard { flex: 1; min-height: 120px; display: flex; flex-direction: column; padding: 12px 14px 13px; }
+#resultPanel { flex: 1; min-height: 120px; display: flex; flex-direction: column; padding: 12px 14px 13px; }
 .tbl-wrap { flex: 1; overflow: auto; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--glass-2); }
 table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 th {
@@ -384,7 +384,7 @@ tfoot td { background: var(--glass); border-top: 1px solid var(--line-strong); f
 <div class="titlebar">
   <div class="tb-brand">
     <div class="tb-logo" aria-hidden="true">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
         <rect x="4.8" y="4.8" width="14.4" height="14.4" rx="1.6" fill="#ffffff"/>
         <rect x="6" y="6.4" width="12" height="2.6" rx="0.7" fill="#3B6CF0"/>
         <rect x="6" y="10.6" width="9.4" height="1" rx="0.5" fill="#C9D2E5"/>
@@ -510,8 +510,8 @@ tfoot td { background: var(--glass); border-top: 1px solid var(--line-strong); f
     <div class="tbl-wrap">
       <table>
         <thead><tr>
-          <th style="width:15%">原文件名</th><th>识别字段</th>
-          <th style="width:28%">新文件名（可编辑）</th><th>状态</th><th class="num" style="width:9%">价税合计</th><th style="width:96px">操作</th>
+          <th style="width:15%">原文件名</th><th style="width:34%">识别字段</th>
+          <th style="width:28%">新文件名（可编辑）</th><th>状态</th><th class="num" style="width:11%">价税合计</th><th style="width:96px">操作</th>
         </tr></thead>
         <tbody id="tableBody"></tbody>
         <tfoot id="tableFoot"></tfoot>
