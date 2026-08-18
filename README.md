@@ -65,6 +65,8 @@ npx electron . --smoke         # 主进程冒烟自检
 npx electron-builder --win portable   # 打包 → dist/发票识别重命名.exe
 ```
 
+**拷机 / 新会话续做**：把整个 `invoice-renamer/` 文件夹拷到新机器（含源码、`electron/tests/fixtures/`、`samples/`；`node_modules/`、`dist/` 无需携带，重新 `npm install` + 打包即可）。续做前先读 `progress.md` 顶部的「📌 当前快照」——那里有当前版本、验证命令、已知注意点，比通读全部历史更快接上。开发验证脚本在 `electron/scripts/verify-*.js`。
+
 程序图标：`electron/build/icon-master.svg`（设计源）→ `scripts/gen-icons.js` 生成 `icon.ico`（16–256px 多尺寸）及各尺寸 PNG。打包配置 `build.icon` 指向 `build/icon.ico`。
 
 ## 安全与可靠性

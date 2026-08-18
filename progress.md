@@ -1,6 +1,30 @@
 # 进度日志
 
-## 会话：2026-08-18（v2.9：UI 布局重构——单列工作流 + Mica 云母材质）
+## 📌 当前快照（新会话 / 拷机续做从这里开始）
+
+- **最新版本**：v2.9.1（UI 布局重构：单列工作流 + Mica 云母材质 + MsyhSb 全局字体）
+- **最近 commit**：`0c49842 fix: 窄窗口下选择按钮保持左右排列 + 预设下拉自适应宽度显示完整`
+- **本机工作目录**：`E:\invoice-renamer`（桌面版在 `electron/`，Web 版已移除）
+- **产品形态**：Electron 桌面 app（`electron/dist/发票识别重命名.exe` 打包产物已就绪），识别 PDF 发票 → 按可视化模板批量重命名
+- **功能全貌（v2.x 演进）**：
+  - v2.7 / v2.7.1：识别进度条 + LLM 用量统计（本次调用次数/tokens）
+  - v2.8：单文件 LLM 重识别（每行「🤖 LLM 重识别」强制覆盖式）
+  - v2.9：UI 布局重构（取消左栏 → 顶栏分段控件 + ⚙ 设置弹窗；单列工作流；表格加价税合计列；Mica 云母材质）
+  - v2.9.1：恢复全局 MsyhSb 字体（此前误删 @font-face）+ 移除顶栏主题按钮
+- **验证命令**（在 `electron/` 下）：
+  - `node tests/test_extractor.js` → 解析回归 5/5
+  - `npx electron . --smoke` → 冒烟 ALL_OK
+  - `npx electron scripts/verify-settings.js` / `verify-progress` / `verify-reparse` / `verify-secret` / `verify-layout` → 交互验证
+  - `npx electron-builder --win portable` → 打包 exe
+- **已知注意点**：
+  - 16MB 全局字体 `renderer/assets/msyh-semibold.ttf` 启动期加载占主线程——verify-progress 需等 `document.fonts.ready`
+  - 主题下拉必须经 `applyThemeSel()` 同步隐藏 `#theme` 再应用（见阶段 18 修复）
+  - 打包版冒烟用 `exe --smoke`（含 extraResources 测试发票）
+- 全部历史按会话记录见下方各「会话」段
+
+---
+
+## 会话：2026-08-18（v2.9/2.9.1 + 清理）
 
 ### 阶段 18（用户真实需求：重构布局与交互结构，不是换皮肤；要易用 + 美观 + 云母元素）
 - **状态：** complete
