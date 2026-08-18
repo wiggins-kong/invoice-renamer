@@ -1,6 +1,6 @@
 {
   "name": "invoice-renamer",
-  "version": "2.9.0",
+  "version": "2.9.1",
   "description": "发票识别重命名桌面版（Electron）",
   "main": "main.js",
   "author": "wiggins",
@@ -29,8 +29,20 @@
       "package.json"
     ],
     "extraResources": [
-      { "from": "tests/fixtures/", "to": "test-fixtures/", "filter": ["*.pdf"] },
-      { "from": "../samples/", "to": "samples/", "filter": ["*.pdf"] }
+      {
+        "from": "tests/fixtures/",
+        "to": "test-fixtures/",
+        "filter": [
+          "*.pdf"
+        ]
+      },
+      {
+        "from": "../samples/",
+        "to": "samples/",
+        "filter": [
+          "*.pdf"
+        ]
+      }
     ],
     "win": {
       "target": [
