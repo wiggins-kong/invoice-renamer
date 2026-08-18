@@ -2,8 +2,8 @@
 
 ## 📌 当前快照（新会话 / 拷机续做从这里开始）
 
-- **最新版本**：v3.1.4（修复识别结果卡片布局——#resultCard id 不匹配致卡片退化 row、表格被挤窄；恢复 column；列宽再平衡；logo 占比修正）
-- **最近 commit**：`ee33d03 v3.1.4：修复识别结果卡片布局`
+- **最新版本**：v3.1.5（统一设置弹窗主题的确认/取消逻辑——预览不写盘、取消回退、修复 matchMedia 反馈环路）
+- **最近 commit**：`ffe3a0f v3.1.5：统一设置弹窗主题的确认/取消逻辑`
 - **本机工作目录**：`E:\invoice-renamer`（桌面版在 `electron/`，Web 版已移除）
 - **产品形态**：Electron 桌面 app（`electron/dist/发票识别重命名.exe` 打包产物已就绪），识别 PDF 发票 → 按可视化模板批量重命名
 - **功能全貌（v2.x 演进）**：
@@ -118,6 +118,25 @@
 - 遇到的问题：
   - **视觉模型对该表格的判断不可靠**（一会儿说列全在、一会儿说 状态/价税合计/操作 列"没渲染"、又说原文件名 undefined）→ 是因为我注入的 demo 数据字段不全（buildRow 用 `it.filename` 显示原文件名、用 `template` 渲染新文件名，我给成了 `src`/空模板）。**结论：列宽这类布局问题要用 DOM getBoundingClientRect 客观测量，别依赖视觉模型的定性描述**
   - 结果区 `display:none` 时 `.tbl-wrap` 无布局宽度为 0 → 测量前需先注入真实数据渲染出内容
+
+## 会话：2026-08-18（v3.1.5：设置弹窗主题统一确认/取消逻辑）
+
+### 阶段 25（用户反馈：切换主题后界面立刻变色以为是预览，但按取消颜色没变回来）
+- **状态：** complete
+- 用户反馈：在设置弹窗里切换主题，界面马上变颜色（以为是预览），但点「取消」颜色没有变回来——要求统一设置这里的确认/取消逻辑
+- 根因（两层）：
+  1. **主题一选就写盘**：`themeSel` 的 `onchange` → `applyThemeSel()` 里既有 `applyTheme()`（实时预览）又调用 **`saveConfig()`**——所以主题一改就**已保存**到磁盘，取消自然回不来；且 `closeSettings(restore)` 取消分支**根本没恢复主题**
+  2. **matchMedia 反馈环路**：预览切到深色后，document 的 `data-theme=dark` 令应用的 `color-scheme` 变 dark → `matchMedia('(prefers-color-scheme: dark)')` 变 **true**；取消回「跟随系统(system)」时 `resolveTheme('system')` 读到的 matchMedia 已被**污染成 dark** → 又被错误解析成深色（实测：取消后 #theme 已回 system、但 dataset.theme 仍是 dark）
+- 执行的操作：
+  1. `applyThemeSel()` **去掉 `saveConfig()`** → 主题切换只做实时预览，真正生效在点「保存」
+  2. `openSettings()` 快照主题：`theme`（模式）/ `themeSel` / **`themeResolved`**（打开时已解析的实际主题）
+  3. `closeSettings(true)` 取消分支：把 #theme/#themeSel 恢复成快照模式，并**直接写回 `themeResolved`**（`documentElement`/`body` 的 data-theme），而非再调 `resolveTheme()`——绕开被预览污染的错误 matchMedia；不写盘（磁盘仍是旧主题）
+- 验证（真实函数驱动，main 侧计数 config:save）：
+  - 初始（跟随系统）light → 切深色预览 dark、**未写盘**（saveCalls 仍 0）→ 取消回 **light**（#theme/#themeSel 也回 system）→ 再切深色点保存 → 持久化 dark（lastPayloadTheme=dark、postSave=dark）
+  - 全程 config:save **仅触发 1 次**（就是那一下保存）
+  - 开发版冒烟 `SMOKE_DONE ALL_OK`；重建 exe（96.6MB）+ 打包版冒烟 `RESULT=ALL_OK`；git commit `ffe3a0f`
+- 教训：**Electron/Chromium 里给 `:root` 设 `data-theme` 并联动 `color-scheme` 时，`matchMedia(prefers-color-scheme)` 会跟随应用自身的 color-scheme 变化**——因此"跟随系统"在经历主题预览/切换后可能被自身污染；凡是需要"回退到之前主题"的场景，直接存/回写**已解析的实际主题**，别在会后依赖 resolveTheme+matchMedia 重新推导
+
 
 
 ## 会话：2026-08-18（v3.0/v3.0.1：毛玻璃背板 + 云母卡片精修）
