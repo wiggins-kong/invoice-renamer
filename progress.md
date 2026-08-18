@@ -2,8 +2,8 @@
 
 ## 📌 当前快照（新会话 / 拷机续做从这里开始）
 
-- **最新版本**：v3.1.3（左上角品牌 logo 更新为 v3.1 方案D「发票+绿勾徽章」；文件按钮 SVG 图标同 v3.1.2）
-- **最近 commit**：`2eaa525 v3.1.3：左上角品牌 logo 更新为 v3.1 最新图标`
+- **最新版本**：v3.1.4（修复识别结果卡片布局——#resultCard id 不匹配致卡片退化 row、表格被挤窄；恢复 column；列宽再平衡；logo 占比修正）
+- **最近 commit**：`ee33d03 v3.1.4：修复识别结果卡片布局`
 - **本机工作目录**：`E:\invoice-renamer`（桌面版在 `electron/`，Web 版已移除）
 - **产品形态**：Electron 桌面 app（`electron/dist/发票识别重命名.exe` 打包产物已就绪），识别 PDF 发票 → 按可视化模板批量重命名
 - **功能全貌（v2.x 演进）**：
@@ -98,6 +98,26 @@
   - 内联 svg 尺寸 15→16px；`aria-hidden="true"` 保留（装饰性，旁有标题文字）
 - 验证：开发版冒烟 `SMOKE_DONE ALL_OK`；可见窗口 capturePage 截图（左上角 300×60 裁剪）+ MiMo 视觉复核——白发票+蓝抬头条+内容行+右上绿勾徽章齐全、无裁切错位，与最新版一致；重建 exe（96.6MB）+ win-unpacked 打包版冒烟 `RESULT=ALL_OK`；git commit `2eaa525`
 - 教训：v3.1.0 改 exe 图标时只动了打包用 build.icon，界面内左上角 logo（内联 SVG）没同步——**程序图标与界面内品牌 logo 是两处独立实现，换图标时都要检查同步**
+
+## 会话：2026-08-18（v3.1.4：修复识别结果卡片布局）
+
+### 阶段 24（用户反馈：把发票拉进去后识别结果的排版变样）
+- **状态：** complete
+- 用户反馈：把发票拉进去后，识别结果区域的排版变得异常（截图显示：标题在顶部，但表格在左、操作按钮在右横排，表格没铺满卡片约 3/4）
+- 根因定位（**真实 Bug，非列宽问题**）：
+  - CSS 里设置结果卡片布局的规则写的是 **`#resultCard`**（`flex:1; min-height:120px; display:flex; flex-direction:column; ...`），但结果卡片元素的实际 id 是 **`id="resultPanel"`**（JS `$('resultPanel')` 也用这个）→ **id 不匹配，这条规则从未生效**
+  - renderTable/renderMeta 用内联 `style.display='flex'` 让卡片显示，但 flex 方向退化成**默认 row** → `card-head` / `.tbl-wrap` / `.actions` 被**横排在一条线上**（实测同 Y：head x17 / tblwrap x298 / actions x718），表格被挤到 ~420px、操作按钮被推到右侧
+  - 用 DOM 测量确认（getComputedStyle = flex/row，`#resultCard` 元素不存在）
+- 执行的操作：
+  1. **修复布局根因**：CSS 选择器 `#resultCard` → `#resultPanel`（与 JS/元素 id 对齐），卡片恢复 `flex-direction:column` → 标题在上、表格全宽在中、底部右侧按钮栏在下
+  2. **列宽再平衡**（用户上一步确认）：识别字段列 `自动(~48%) → width:34%`，价税合计 `9% → 11%`
+- 验证（**客观 DOM 测量，非视觉猜测**）：
+  - 1180：panelStyle=flex/column，表格铺满 1105px（原被挤到 420px），列宽 识别字段31%/价税合计10%，`overflow:false`
+  - 1080：同样 column，表格 1005px，识别字段30%/价税合计10%，无溢出
+  - 开发版冒烟 `SMOKE_DONE ALL_OK`；重建 exe（96.6MB）+ 打包版冒烟 `RESULT=ALL_OK`；git commit `ee33d03`
+- 遇到的问题：
+  - **视觉模型对该表格的判断不可靠**（一会儿说列全在、一会儿说 状态/价税合计/操作 列"没渲染"、又说原文件名 undefined）→ 是因为我注入的 demo 数据字段不全（buildRow 用 `it.filename` 显示原文件名、用 `template` 渲染新文件名，我给成了 `src`/空模板）。**结论：列宽这类布局问题要用 DOM getBoundingClientRect 客观测量，别依赖视觉模型的定性描述**
+  - 结果区 `display:none` 时 `.tbl-wrap` 无布局宽度为 0 → 测量前需先注入真实数据渲染出内容
 
 
 ## 会话：2026-08-18（v3.0/v3.0.1：毛玻璃背板 + 云母卡片精修）
