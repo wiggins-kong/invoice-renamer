@@ -79,8 +79,6 @@
 - 遇到的问题：
   - **离屏截图看不到毛玻璃**：verify-layout 的 capturePage 在 offscreen/隐藏窗口不渲染 backdrop-filter → 误判「背板纯白」。改用**可见窗口**脚本（shot-renderer-visible.js）截图验证真实效果；这也是 v2.9 progress 里记过的 backdrop-filter 合成层问题
   - **视觉模型配置排查**：用户以为配了 mimo 视觉但失败——config auxiliary.vision.provider=xiaomi 无 XIAOMI_API_KEY 凭证（.env 注释占位）；曾切 opencode-go 但该通道只提供文本模型（mimo-v2.5 被路由到 DeepSeek-V4-Flash，400 not multimodal）；最终用户重跑 hermes setup 填好 key，xiaomi 视觉恢复可用
-  - **后台视觉反复报「xiaomi not configured」** → 需用户在 Hermes 设置里补 XIAOMI_API_KEY 才真正可用
-
 
 ## 会话：2026-08-18（v2.9/2.9.1 + 清理）
 
