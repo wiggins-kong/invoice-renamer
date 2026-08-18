@@ -1,36 +1,38 @@
 <svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-  <!-- 发票识别重命名 · 程序图标（用户选定方向 B：发票 + 命名标签）
-       视觉世界：明亮现代工作台，白+蓝，Notion/Linear 气质，克制几何，单强调色 #2563EB -->
+  <!-- 发票识别重命名 · 程序图标（v3.1 重设计 方案D：发票 + 绿色对勾徽章,居中版）
+       视觉世界延续 v3.0 界面:深蓝渐变 accent/v3.0(#1e40af 系)+圆角卡片+扁平简洁,
+       绿勾 = 「识别并命名完成」一步到位 -->
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#3E7BFA"/>
-      <stop offset="1" stop-color="#1D4ED8"/>
+      <stop offset="0" stop-color="#3B6CF0"/>
+      <stop offset="1" stop-color="#1E3A8A"/>
     </linearGradient>
     <filter id="paperShadow" x="-40%" y="-40%" width="180%" height="180%">
-      <feDropShadow dx="0" dy="18" stdDeviation="26" flood-color="#0B2A85" flood-opacity="0.40"/>
+      <feDropShadow dx="0" dy="26" stdDeviation="34" flood-color="#0B1F5C" flood-opacity="0.42"/>
     </filter>
-    <filter id="labelShadow" x="-30%" y="-60%" width="160%" height="220%">
-      <feDropShadow dx="0" dy="10" stdDeviation="18" flood-color="#0B2A85" flood-opacity="0.30"/>
+    <filter id="badgeShadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="12" stdDeviation="20" flood-color="#0B1F5C" flood-opacity="0.30"/>
     </filter>
   </defs>
 
   <!-- 底：圆角方块，135° 渐变与界面强调色一致 -->
   <rect x="0" y="0" width="1024" height="1024" rx="232" fill="url(#bg)"/>
 
-  <!-- 发票纸张（白色，柔和投影浮起） -->
+  <!-- 发票纸张（白色主体，居中，柔和投影浮起） -->
   <g filter="url(#paperShadow)">
-    <rect x="292" y="272" width="440" height="488" rx="44" fill="#ffffff"/>
+    <rect x="205" y="205" width="614" height="614" rx="68" fill="#ffffff"/>
   </g>
 
-  <!-- 命名标签条：蓝色，从纸左缘探出，内嵌两行白色文件名 -->
-  <g filter="url(#labelShadow)">
-    <rect x="248" y="384" width="528" height="104" rx="30" fill="#2563EB"/>
-    <rect x="330" y="420" width="188" height="18" rx="9" fill="#FFFFFF" fill-opacity="0.92"/>
-    <rect x="330" y="456" width="252" height="18" rx="9" fill="#FFFFFF" fill-opacity="0.92"/>
-  </g>
+  <!-- 抬头条：蓝色，发票文档头部 -->
+  <rect x="256" y="273" width="512" height="111" rx="30" fill="#3B6CF0"/>
 
-  <!-- 纸上内容行（发票文本节奏：长短-中-长） -->
-  <rect x="368" y="560" width="280" height="24" rx="12" fill="#D6DFF1"/>
-  <rect x="368" y="622" width="216" height="24" rx="12" fill="#D6DFF1"/>
-  <rect x="368" y="684" width="252" height="24" rx="12" fill="#D6DFF1"/>
+  <!-- 纸上内容行（识别出的发票文本节奏） -->
+  <rect x="256" y="452" width="400" height="43" rx="21" fill="#C9D2E5"/>
+  <rect x="256" y="563" width="400" height="43" rx="21" fill="#C9D2E5"/>
+
+  <!-- 绿色对勾徽章：压发票右上角（发票右上角盖戳的现实认知），整体居中平衡 -->
+  <g filter="url(#badgeShadow)">
+    <circle cx="734" cy="290" r="145" fill="#1ED5A5" stroke="#FFFFFF" stroke-width="30"/>
+    <path d="M666 290 l51 51 85-102" stroke="#FFFFFF" stroke-width="38" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
 </svg>
