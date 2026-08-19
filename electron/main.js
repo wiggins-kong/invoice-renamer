@@ -331,13 +331,13 @@ app.whenReady().then(() => {
               document.body.dataset.theme = '${themeArg}';
             const demoItems = [
               { src:'C:/demo/1 (1).pdf', filename:'1 (1).pdf',
-                fields:{ invoice_no:'26447000001546483901', date:'2026年08月08日', seller:'广州晶东贸易有限公司', buyer:'广州白云山明兴制药有限公司', amount_excl:'405.01', tax:'53.36', amount:'458.37', amount_cn:'肆佰伍拾捌元叁角柒分', type:'电子专用发票', seller_tax_id:'91440101664041243T', buyer_tax_id:'9144010119046020XE' },
+                fields:{ invoice_no:'26447000002000000001', date:'2026年08月08日', seller:'广州云帆贸易有限公司', buyer:'广州明辉制药有限公司', amount_excl:'405.01', tax:'53.36', amount:'458.37', amount_cn:'肆佰伍拾捌元叁角柒分', type:'电子专用发票', seller_tax_id:'91440100MA5FAKE001', buyer_tax_id:'91440100MA5FAKE002' },
                 status:'ok', errors:[], llm_used:false, llm_error:null },
               { src:'C:/demo/1 (2).pdf', filename:'1 (2).pdf',
-                fields:{ invoice_no:'26447000001568876321', date:'2026年08月12日', seller:'广州晶东贸易有限公司', buyer:'广州白云山明兴制药有限公司', amount_excl:'455.20', tax:'59.18', amount:'514.38', amount_cn:'伍佰壹拾肆元叁角捌分', type:'电子专用发票', seller_tax_id:'91440101664041243T', buyer_tax_id:'9144010119046020XE' },
+                fields:{ invoice_no:'26447000002000000002', date:'2026年08月12日', seller:'广州云帆贸易有限公司', buyer:'广州明辉制药有限公司', amount_excl:'455.20', tax:'59.18', amount:'514.38', amount_cn:'伍佰壹拾肆元叁角捌分', type:'电子专用发票', seller_tax_id:'91440100MA5FAKE001', buyer_tax_id:'91440100MA5FAKE002' },
                 status:'ok', errors:[], llm_used:false, llm_error:null },
               { src:'C:/demo/1 (3).pdf', filename:'1 (3).pdf',
-                fields:{ invoice_no:'26447000001569602479', date:'2026年08月12日', seller:'广州晶东贸易有限公司', buyer:'广州白云山明兴制药有限公司', amount_excl:'540.85', tax:'70.31', amount:'611.16', amount_cn:'陆佰壹拾壹元壹角陆分', type:'电子专用发票', seller_tax_id:'91440101664041243T', buyer_tax_id:'9144010119046020XE' },
+                fields:{ invoice_no:'26453579152834615209', date:'2026年08月12日', seller:'广州云帆贸易有限公司', buyer:'广州明辉制药有限公司', amount_excl:'540.85', tax:'70.31', amount:'611.16', amount_cn:'陆佰壹拾壹元壹角陆分', type:'电子专用发票', seller_tax_id:'91440100MA5FAKE001', buyer_tax_id:'91440100MA5FAKE002' },
                 status:'ok', errors:[], llm_used:true, llm_error:null, llm_usage:{ input:812, output:96, total:908 } },
             ];
             items = demoItems; renderTable(); renderMeta();
@@ -375,7 +375,7 @@ app.whenReady().then(() => {
         const samples = [
           path.join(base, '样例1_电子普通发票.pdf'),
           path.join(base, '样例2_电子专用发票.pdf'),
-          path.join(fixtures, '26447000001568876321_2026-08-12广州晶东贸易有限公司.pdf'),
+          path.join(fixtures, '26447000002000000002_2026-08-12广州云帆贸易有限公司.pdf'),
         ];
         const items = (await parseItems(samples, cfg)).items;
         for (const it of items) console.log('SMOKE', it.filename, '->', it.suggested, '|', it.status);

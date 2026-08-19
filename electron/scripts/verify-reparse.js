@@ -17,17 +17,17 @@ const TEST_CFG = {
 // 两行的初始结果：正则解析（无 llm_used）。第 2 个文件的金额故意“错”（正则自信识别错，用户真实痛点）
 const BASE_ITEMS = [
   { src: 'C:/demo/票1.pdf', filename: '票1.pdf',
-    fields: { invoice_no: '26447000001546483901', date: '2026年08月08日', seller: '广州晶东贸易有限公司', amount: '458.37' },
-    suggested: '2026年08月08日_26447000001546483901', status: 'ok', errors: [], llm_used: false, llm_error: null, llm_usage: null },
+    fields: { invoice_no: '26447000002000000001', date: '2026年08月08日', seller: '广州云帆贸易有限公司', amount: '458.37' },
+    suggested: '2026年08月08日_26447000002000000001', status: 'ok', errors: [], llm_used: false, llm_error: null, llm_usage: null },
   { src: 'C:/demo/票2.pdf', filename: '票2.pdf',
-    fields: { invoice_no: '26447000001568876321', date: '2026年08月12日', seller: '广州晶东贸易有限公司', amount: '514.38' },
-    suggested: '2026年08月12日_26447000001568876321', status: 'ok', errors: [], llm_used: false, llm_error: null, llm_usage: null },
+    fields: { invoice_no: '26447000002000000002', date: '2026年08月12日', seller: '广州云帆贸易有限公司', amount: '514.38' },
+    suggested: '2026年08月12日_26447000002000000002', status: 'ok', errors: [], llm_used: false, llm_error: null, llm_usage: null },
 ];
 
 // 第 1 次 LLM 重识别返回：修正 票2 的金额（514.38 → 514.39）并补全字段
 const LLM_FIXED_FIELDS = {
-  invoice_no: '26447000001568876321', date: '2026年08月12日',
-  seller: '广州晶东贸易有限公司', buyer: '广州白云山明兴制药有限公司',
+  invoice_no: '26447000002000000002', date: '2026年08月12日',
+  seller: '广州云帆贸易有限公司', buyer: '广州明辉制药有限公司',
   amount_excl: '455.21', tax: '59.18', amount: '514.39',
   type: '电子专用发票',
 };
@@ -52,8 +52,8 @@ function registerStubs() {
     return {
       item: {
         src, filename: path.basename(src),
-        fields: { ...LLM_FIXED_FIELDS, invoice_no: String(src).includes('票1') ? '26447000001546483901' : LLM_FIXED_FIELDS.invoice_no },
-        suggested: String(src).includes('票1') ? '2026年08月08日_26447000001546483901' : '2026年08月12日_26447000001568876321',
+        fields: { ...LLM_FIXED_FIELDS, invoice_no: String(src).includes('票1') ? '26447000002000000001' : LLM_FIXED_FIELDS.invoice_no },
+        suggested: String(src).includes('票1') ? '2026年08月08日_26447000002000000001' : '2026年08月12日_26447000002000000002',
         status: 'ok', errors: [],
         llm_used: true, llm_error: null,
         llm_usage: { input: 812, output: 96, total: 908 },
@@ -133,7 +133,7 @@ app.whenReady().then(async () => {
       R2('meta-tokens', $('resultMeta').textContent.includes('908'));
       // 该行的新文件名随字段更新（模板 date_invoice_no）
       const ta = newRow.querySelector('textarea.new').value;
-      R2('suggested-updated', ta.includes('2026年08月12日_26447000001568876321'), ta);
+      R2('suggested-updated', ta.includes('2026年08月12日_26447000002000000002'), ta);
 
       // 手改第 1 行（index 0）的新文件名 → 重识别第 2 行 → 断言第 1 行手改不丢失（单行更新不动其他行）
       const ta0 = document.querySelectorAll('textarea.new')[0];

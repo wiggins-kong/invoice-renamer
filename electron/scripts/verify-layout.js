@@ -44,9 +44,9 @@ app.whenReady().then(async () => {
   await win.webContents.executeJavaScript(`
     (() => {
       const demoItems = [
-        { src:'C:/demo/1.pdf', filename:'1.pdf', fields:{ invoice_no:'26447000001546483901', date:'2026年08月08日', seller:'广州晶东贸易有限公司', buyer:'广州白云山明兴制药有限公司', amount_excl:'405.01', tax:'53.36', amount:'458.37', amount_cn:'肆佰伍拾捌元叁角柒分', type:'电子专用发票' }, status:'ok', errors:[], llm_used:false },
-        { src:'C:/demo/2.pdf', filename:'2.pdf', fields:{ invoice_no:'26447000001568876321', date:'2026年08月12日', seller:'广州晶东贸易有限公司', amount:'514.38', type:'电子专用发票' }, status:'ok', errors:[], llm_used:false },
-        { src:'C:/demo/3.pdf', filename:'3.pdf', fields:{ invoice_no:'26447000001569602479', date:'2026年08月12日', amount:'611.16' }, status:'partial', errors:[], llm_used:true },
+        { src:'C:/demo/1.pdf', filename:'1.pdf', fields:{ invoice_no:'26447000002000000001', date:'2026年08月08日', seller:'广州云帆贸易有限公司', buyer:'广州明辉制药有限公司', amount_excl:'405.01', tax:'53.36', amount:'458.37', amount_cn:'肆佰伍拾捌元叁角柒分', type:'电子专用发票' }, status:'ok', errors:[], llm_used:false },
+        { src:'C:/demo/2.pdf', filename:'2.pdf', fields:{ invoice_no:'26447000002000000002', date:'2026年08月12日', seller:'广州云帆贸易有限公司', amount:'514.38', type:'电子专用发票' }, status:'ok', errors:[], llm_used:false },
+        { src:'C:/demo/3.pdf', filename:'3.pdf', fields:{ invoice_no:'26453579152834615209', date:'2026年08月12日', amount:'611.16' }, status:'partial', errors:[], llm_used:true },
       ];
       items = demoItems; renderTable(); renderMeta();
     })();

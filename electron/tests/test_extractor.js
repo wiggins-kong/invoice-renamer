@@ -24,17 +24,17 @@ const CASES = [
     expect: { invoice_no: '25512345678901234568', date: '2026年08月12日', seller: '广州某某软件有限公司', buyer: '上海某某供应链有限公司', amount: '5000.00', amount_cn: '伍仟元整', type: '电子专用发票' },
   },
   {
-    file: path.join(FIXTURES, '26447000001576812494_2026-08-13广州晶东贸易有限公司广州白云山明兴制药有限公司332电子发票(增值税专用发票).pdf'),
-    expect: { invoice_no: '26447000001576812494', date: '2026年08月13日', seller: '广州晶东贸易有限公司', buyer: '广州白云山明兴制药有限公司', amount: '332.00', amount_excl: '293.81', tax: '38.19', amount_cn: '叁佰叁拾贰圆整', type: '电子专用发票', seller_tax_id: '91440101664041243T', buyer_tax_id: '9144010119046020XE' },
+    file: path.join(FIXTURES, '26447000002000000001_2026-08-13广州云帆贸易有限公司广州明辉制药有限公司332电子发票(增值税专用发票).pdf'),
+    expect: { invoice_no: '26447000002000000001', date: '2026年08月13日', seller: '广州云帆贸易有限公司', buyer: '广州明辉制药有限公司', amount: '332.00', amount_excl: '293.81', tax: '38.19', amount_cn: '叁佰叁拾贰圆整', type: '电子专用发票', seller_tax_id: '91440100MA5FAKE001', buyer_tax_id: '91440100MA5FAKE002' },
   },
   {
-    file: path.join(FIXTURES, '26447000001568876321_2026-08-12广州晶东贸易有限公司.pdf'),
-    expect: { invoice_no: '26447000001568876321', date: '2026年08月12日', seller: '广州晶东贸易有限公司', amount: '514.38', amount_excl: '455.20', tax: '59.18', type: '电子专用发票' },
+    file: path.join(FIXTURES, '26447000002000000002_2026-08-12广州云帆贸易有限公司.pdf'),
+    expect: { invoice_no: '26447000002000000002', date: '2026年08月12日', seller: '广州云帆贸易有限公司', amount: '514.38', amount_excl: '455.20', tax: '59.18', type: '电子专用发票' },
   },
   {
-    // 防复制水印 PDF（每个字重复 3 遍）：dedup 兜底后应正确识别销售方
-    file: path.join(FIXTURES, '水印发票_26447000001546483915.pdf'),
-    expect: { invoice_no: '26447000001546483915', date: '2026年08月08日', seller: '广州晶东贸易有限公司', buyer: '广州白云山明兴制药有限公司', amount: '1177.00', amount_excl: '1041.59', tax: '135.41', type: '电子专用发票' },
+    // 防复制水印 PDF（数字/日期逐字重复 3 遍、名称整段重复）：dedup 兜底后应正确识别
+    file: path.join(FIXTURES, '水印发票_26453579152834615209.pdf'),
+    expect: { invoice_no: '26453579152834615209', date: '2026年08月08日', seller: '广州云帆贸易有限公司', buyer: '广州明辉制药有限公司', amount: '120.50', amount_excl: '106.64', tax: '13.86', type: '电子专用发票' },
   },
 ];
 

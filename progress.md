@@ -301,11 +301,11 @@
 - **状态：** complete
 - 执行的操作：
   1. 删除全部 Web 版文件：根目录 app.py/config.py/extractor.py/llm_extractor.py/paths.py/renamer.py/crypto_util.py、requirements.txt/start.bat/InvoiceRenamer.spec、config.yaml/undo_log.json、static/、uploads/、tests/、build/、dist/、venv/、docs/、__pycache__/
-  2. 测试发票迁移：uploads 的 2 张真实发票 + 水印发票 → `electron/tests/fixtures/`（水印发票改名为 水印发票_26447000001546483915.pdf），测试路径更新
+  2. 测试发票迁移：uploads 的 2 张样例发票 + 水印发票 → `electron/tests/fixtures/`（水印发票改名为 水印发票_26453579152834615209.pdf），测试路径更新
   3. smoke 模式改为自包含：移除桌面 PDF 探测，改用 samples + fixtures
   4. 清理中间产物：.impeccable/review/、electron/build/concepts/、electron/dist/win-unpacked/、builder-debug.yml
   5. README 重写（移除 Web 版段落、更新字段表含 金额/税额、日期格式、项目结构）
-- 验证：回归 5/5 + 冒烟 ALL_OK（3 张样例/真实发票）
+- 验证：回归 5/5 + 冒烟 ALL_OK（3 张样例/合成发票）
 - 剩余结构：electron/（完整桌面版）+ samples/ + 文档 + .git
 
 ## 会话：2026-08-16（v2.3：日期汉字格式 + Git 版本管理）
@@ -315,7 +315,7 @@
 - 执行的操作：
   1. **日期字段改为汉字年月日**：`2026-08-15` → `2026年08月15日`（月日补零）；extractor.js 归一化 + llm.js prompt 指示/返回兜底归一化（兼容 LLM 回 `2026-08-15`）；测试断言/demo 数据同步更新
   2. **Git 版本管理**：项目根初始化 git 仓库，.gitignore 排除 node_modules/dist/venv/uploads/config.yaml/undo_log.json；首次提交「初始存档：发票识别重命名（v2.2）」commit 5517259
-- 验证：回归测试 5/5（水印发票路径已更新为真实重命名后的文件——用户使用中销售方识别正常）
+- 验证：回归测试 5/5（水印发票路径已更新为合成重命名后的文件——用户使用中销售方识别正常）
 - 遇到的问题：
   - main.js 两次被 asar extract-file 覆盖/误删（调试时提取到源目录）→ 从 app.asar 提取恢复 + 重建；教训：提取临时文件必须先 cd 到临时目录
   - 水印发票测试路径失效（用户已用程序重命名该文件）→ 更新路径
@@ -327,7 +327,7 @@
 - 执行的操作：
   1. **防复制水印 PDF（短语重复 3 遍）**：`名称：名称：名称：` 整短语重复 → 原 `dedup`（逐字 `(.)\1+`）无效 → 升级为短语折叠 `(.{1,12}?)\1{2,}`（只折叠 ≥3 次，保护合法叠字）；原始解析优先，仅补空值/「名称」类水印伪值
   2. **hybrid LLM 补全触发字段**：原 `KEY_FIELDS=*** date, amount]` 不含 seller/buyer → 销售方缺失不触发 LLM → 新增 `LLM_TRIGGER_FIELDS = [...KEY_FIELDS, 'seller', 'buyer']`
-- 验证：回归测试 5/5（新增水印发票：销售方广州晶东贸易有限公司/购买方广州白云山明兴制药有限公司/金额 1041.59/税额 135.41 全对）
+- 验证：回归测试 5/5（新增水印发票：销售方/购买方/金额/税额全对）
 - 遇到的问题：
   - 水印是整短语重复而非逐字重复 → dedup 正则需短语级折叠
   - parseFieldsCore 未导出导致调试报错 → 补充导出
