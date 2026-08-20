@@ -342,7 +342,7 @@ app.whenReady().then(() => {
             ];
             items = demoItems; renderTable(); renderMeta();
               await document.fonts.ready;
-              return document.fonts.check('14px MsyhSb');
+              return document.fonts.check('14px "Microsoft YaHei"');
             })();
           `);
           console.log('FONT_CHECK', fontOk);

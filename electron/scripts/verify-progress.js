@@ -56,8 +56,9 @@ app.whenReady().then(async () => {
   });
   await win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
 
-  // 等 MsyhSb 字体就绪:16MB 全局字体启动期加载会占主线程,若不等就绪,
-  // 后面的 90/190/310/450ms 时序断言会因 reflow 错过窗口(偶发 11-12 FAIL)
+  // 等字体/布局 settle:让首帧渲染完成,避免后面的时序断言因 reflow 错过窗口。
+  // 已改用系统微软雅黑(不再打包 16MB 字体),document.fonts.ready 会立即 resolve,
+  // 双 rAF 仍保证拿到稳定布局后再断言。
   await win.webContents.executeJavaScript(`document.fonts.ready.then(() => new Promise(r => {
     // 再给一帧让字体 reflow 完成,避免立即测量到旧布局
     requestAnimationFrame(() => requestAnimationFrame(r));

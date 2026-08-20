@@ -2,8 +2,8 @@
 
 ## 📌 当前快照（新会话 / 拷机续做从这里开始）
 
-- **最新版本**：v3.1.5（统一设置弹窗主题的确认/取消逻辑——预览不写盘、取消回退、修复 matchMedia 反馈环路）
-- **最近 commit**：`ffe3a0f v3.1.5：统一设置弹窗主题的确认/取消逻辑`
+- **最新版本**：v3.1.6（启动提速：移除自带 16MB MsyhSb 字体，改用系统微软雅黑）
+- **最近 commit**：`v3.1.6：启动提速（移除 16MB 自带字体，用系统微软雅黑）`
 - **本机工作目录**：`E:\invoice-renamer`（桌面版在 `electron/`，Web 版已移除）
 - **产品形态**：Electron 桌面 app（`electron/dist/发票识别重命名.exe` 打包产物已就绪），识别 PDF 发票 → 按可视化模板批量重命名
 - **功能全貌（v2.x 演进）**：
@@ -19,7 +19,7 @@
   - `npx electron scripts/verify-settings.js` / `verify-progress` / `verify-reparse` / `verify-secret` / `verify-layout` → 交互验证
   - `npx electron-builder --win portable` → 打包 exe
 - **已知注意点**：
-  - 16MB 全局字体 `renderer/assets/msyh-semibold.ttf` 启动期加载占主线程——verify-progress 需等 `document.fonts.ready`
+  - 已移除自带 16MB 字体（v3.1.6）：UI 走系统微软雅黑，启动显著加快；verify-progress 的 `document.fonts.ready` 现在会立即 resolve
   - 主题下拉必须经 `applyThemeSel()` 同步隐藏 `#theme` 再应用（见阶段 18 修复）
   - 打包版冒烟用 `exe --smoke`（含 extraResources 测试发票）
   - **毛玻璃背板注意**：真实 app 的磨砂由系统 Mica 提供，渲染层只做环境色渐变打底（勿加全屏 blur 层遮挡 Mica）；离屏截图（verify-layout 的 capturePage）不渲染 backdrop-filter，看效果要用可见窗口
@@ -40,6 +40,27 @@
   2. 卡片玻璃透明度微调更通透：root 0.58→0.50 / strong 0.82→0.78 / 2 0.44→0.36
 - 验证：extractor 5/5；冒烟 ALL_OK；verify-layout 双尺寸无回归（按钮单行、无溢出、拖拽区完整）；打包版冒烟 RESULT=ALL_OK（exe 92.15 MiB）
 - 教训：mockup 是「保证效果」，真实 app 是「跟随系统」——给用户看 mockup 时也要说明 Win11 上 Mica 会随壁纸取色，避免落地后观感差异引发困惑
+
+---
+
+## 会话：2026-08-20（v3.1.6：启动提速——移除 16MB 自带字体）
+
+### 阶段 26（用户报告「每次打开都要 5 秒以上」；定位为 16MB 主字体；方案 B 落地）
+- **状态：** complete
+- 分析定位：
+  - 打包版 `exe --smoke`（主进程 + portable 自解压，不建窗口）实测仅 **777ms** → 自解压/主进程不是瓶颈
+  - 渲染进程唯一大型资源 = `renderer/assets/msyh-semibold.ttf`（16MB 全量微软雅黑 Semibold），且是 UI 主字体，
+    排在每个 font-family 第一位；窗口 `show:false`，等 `ready-to-show` 才显示 → 首次绘制必须同步解析+栅格化该字体
+  - `document.fonts.ready` 等待的正是这段；progress.md 此前已标注「16MB 全局字体启动期加载占主线程」
+- 用户决策：**方案 B**——移除自带字体，改用系统微软雅黑（Windows 10/11 必带，原栈第二位本来就是它）
+- 改动：
+  1. `renderer/index.html`：删除 `@font-face`；body 字体栈 `'MsyhSb','Microsoft YaHei',…` 与 `--mono` 改为以 `'Microsoft YaHei'` 打头
+  2. `main.js` `--screenshot`：`document.fonts.check('14px MsyhSb')` → `'14px "Microsoft YaHei"'`
+  3. `scripts/verify-progress.js`：更新注释（不再有带字体；`document.fonts.ready` 现在立即 resolve，双 rAF 仍保稳定布局）
+  4. 删除 `renderer/assets/msyh-semibold.ttf`（16MB）→ asar / exe 随之变小
+  5. 版本 3.1.0 → 3.1.6
+- 验证：extractor 回归 5/5；开发版 `--smoke` ALL_OK（GPU 崩溃日志为本沙箱无头环境的既有现象，与改动无关）
+- 注意：本沙箱无头环境无法跑需开窗口的 verify-*.js（GPU 进程 0xC0000135 崩溃）——真机交互验证 + 打包版冒烟由用户侧确认
 
 ---
 

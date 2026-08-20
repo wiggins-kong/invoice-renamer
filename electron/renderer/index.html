@@ -5,14 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>发票识别重命名</title>
 <style>
-  /* ============ 全局 UI 字体：微软雅黑 Semibold（MsyhSb，已随包分发） ============ */
-  @font-face {
-    font-family: 'MsyhSb';
-    src: url('assets/msyh-semibold.ttf') format('truetype');
-    font-weight: 400 700;
-    font-display: swap;
-  }
-
   /* ============================================================
    布局重构 v2.9：单列工作流 + Mica 云母材质
    - 单列自上而下 = 工作流顺序：拖入 → 配模板 → 看结果 → 重命名
@@ -46,7 +38,7 @@
   --shadow-md: 0 8px 28px rgba(30, 41, 66, .16);
   --radius: 12px;
   --radius-sm: 8px;
-  --mono: 'MsyhSb', 'Cascadia Code', 'Cascadia Mono', Consolas, 'Courier New', monospace;
+  --mono: 'Microsoft YaHei', 'Cascadia Code', 'Cascadia Mono', Consolas, 'Courier New', monospace;
 }
 [data-theme="dark"] {
   --mica-top: rgba(34, 40, 52, 0.90);
@@ -81,7 +73,7 @@ body {
   background:
     linear-gradient(180deg, var(--mica-top), var(--mica-bottom)) fixed;
   color: var(--text);
-  font: 14px/1.55 'MsyhSb', 'Microsoft YaHei', 'PingFang SC', 'Segoe UI', system-ui, sans-serif;
+  font: 14px/1.55 'Microsoft YaHei', 'PingFang SC', 'Segoe UI', system-ui, sans-serif;
   user-select: none; overflow: hidden;
   display: flex; flex-direction: column;
   transition: background .2s ease, color .2s ease;
