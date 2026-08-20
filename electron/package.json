@@ -7,7 +7,7 @@
   "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --win portable"
+    "dist": "electron-builder --win"
   },
   "dependencies": {
     "pdfjs-dist": "^4.8.69"
@@ -26,7 +26,8 @@
       "renderer/**",
       "lib/**",
       "build/icon.ico",
-      "package.json"
+      "package.json",
+      "!node_modules/@napi-rs/**"
     ],
     "extraResources": [
       {
@@ -46,13 +47,20 @@
     ],
     "win": {
       "target": [
-        "portable"
+        "portable",
+        "nsis"
       ],
       "icon": "build/icon.ico",
       "signAndEditExecutable": false
     },
     "portable": {
       "artifactName": "invoice-renamer.exe"
+    },
+    "nsis": {
+      "artifactName": "invoice-renamer-setup-${version}.exe",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "发票识别重命名"
     }
   }
 }
