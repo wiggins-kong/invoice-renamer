@@ -52,7 +52,7 @@
       "signAndEditExecutable": false
     },
     "portable": {
-      "artifactName": "发票识别重命名.exe"
+      "artifactName": "invoice-renamer.exe"
     }
   }
 }
