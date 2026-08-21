@@ -47,20 +47,13 @@
     ],
     "win": {
       "target": [
-        "portable",
-        "nsis"
+        "portable"
       ],
       "icon": "build/icon.ico",
       "signAndEditExecutable": false
     },
     "portable": {
       "artifactName": "invoice-renamer.exe"
-    },
-    "nsis": {
-      "artifactName": "invoice-renamer-setup-${version}.exe",
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "shortcutName": "发票识别重命名"
     }
   }
 }
